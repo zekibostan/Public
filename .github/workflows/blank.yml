@@ -20,8 +20,6 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # Kritik dosya kontrolunu kaldiriyorum, cunku gradlew olmadigini biliyoruz.
-          
       - name: 3. Java 17 Kurulumu
         uses: actions/setup-java@v4
         with:
@@ -38,17 +36,17 @@ jobs:
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
           
-      # 🚀 HARİCİ GRADLE KURULUMU: gradlew eksik oldugu icin sistemin kendi Gradle'ini kullaniyoruz
-      - name: 5. Gradle Kurulumu
+      # 🚀 KRİTİK ADIM: Gradle sürümünü kullanıcının istediği 8.1.1'e ayarlıyoruz.
+      - name: 5. Gradle Kurulumu (8.1.1)
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.5' 
+          gradle-version: '8.1.1' 
           
       - name: 6. Debug APK'sini Olustur (Direkt Gradle Komutu)
         run: |
-          echo "Sistem Gradle ile build baslatiliyor..."
+          echo "Gradle 8.1.1 ile build baslatiliyor..."
           cd tv_project
-          # gradlew yerine dogrudan 'gradle' komutunu kullaniyoruz.
+          # gradlew eksik oldugu icin 'gradle' komutunu kullaniyoruz.
           gradle assembleDebug --stacktrace --warning-mode all
           
       - name: 7. Olusan APK'yi Yukle (Artifact)
