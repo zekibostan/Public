@@ -20,7 +20,7 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # 🚀 3. ADIM: app/build.gradle (Leanback KTX Eklendi)
+      # 🚀 3. ADIM: app/build.gradle (Hatalı Leanback KTX Kaldırıldı)
       - name: 3. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
@@ -72,10 +72,7 @@ jobs:
               implementation 'androidx.appcompat:appcompat:1.6.1'
               implementation 'androidx.leanback:leanback:1.2.0'
               
-              // 🚀 KRITIK DUZELTME: Leanback KTX uzantilarini (searchResultProvider, setSearchAffordanceColor vb.) ekler.
-              implementation 'androidx.leanback:leanback-ktx:1.2.0' 
-              
-              // Coroutine ve lifecycleScope uzantilari
+              // Coroutine ve lifecycleScope uzantilari (Önceki lifecycleScope hatalarini gidermek icin)
               implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
               implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
               implementation "androidx.fragment:fragment-ktx:1.6.2"    
