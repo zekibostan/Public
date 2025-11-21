@@ -1,36 +1,135 @@
-# This is a basic workflow to help you get started with Actions
+name: Build APK from tv.zip
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+    - name: Install unzip
+      run: sudo apt-get install -y unzip
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+    - name: Extract tv.zip
+      run: |
+        unzip -o tv.zip -d project
+        echo "ZIP extracted into project/"
+
+    - name: Ensure root Gradle files exist
+      run: |
+        cd project
+
+        # gradlew
+        if [ ! -f "gradlew" ]; then
+          echo "Creating gradlew..."
+          cat << 'EOF' > gradlew
+#!/bin/sh
+DEFAULT_JVM_OPTS=""
+CLASSPATH=gradle/wrapper/gradle-wrapper.jar
+exec java $DEFAULT_JVM_OPTS -cp $CLASSPATH org.gradle.wrapper.GradleWrapperMain "$@"
+EOF
+          chmod +x gradlew
+        fi
+
+        # gradle wrapper directory
+        mkdir -p gradle/wrapper
+
+        # gradle-wrapper.properties
+        if [ ! -f "gradle/wrapper/gradle-wrapper.properties" ]; then
+          echo "Creating gradle-wrapper.properties..."
+          cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
+EOF
+        fi
+
+        # gradle-wrapper.jar (download if missing)
+        if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "Downloading gradle-wrapper.jar..."
+          wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O gradlebin.zip
+          unzip -p gradlebin.zip gradle-8.4/lib/gradle-launcher-*.jar > gradle/wrapper/gradle-wrapper.jar || echo "Wrapper jar created"
+          rm gradlebin.zip || true
+        fi
+
+        # settings.gradle
+        if [ ! -f "settings.gradle" ]; then
+          echo "rootProject.name = 'EgzeTvPlus'" > settings.gradle
+          echo "Created settings.gradle"
+        fi
+
+        # build.gradle (root)
+        if [ ! -f "build.gradle" ]; then
+          echo "Creating root build.gradle..."
+          cat << 'EOF' > build.gradle
+buildscript {
+    repositories { google(); mavenCentral() }
+    dependencies { classpath 'com.android.tools.build:gradle:8.2.0' }
+}
+allprojects { repositories { google(); mavenCentral() } }
+task clean(type: Delete) { delete rootProject.buildDir }
+EOF
+        fi
+
+        echo "Root Gradle structure validated."
+
+    - name: Ensure app/build.gradle exists
+      run: |
+        cd project
+
+        if [ ! -f "app/build.gradle" ]; then
+          echo "Creating app/build.gradle..."
+          mkdir -p app
+          cat << 'EOF' > app/build.gradle
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace "com.egzetv.app"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.egzetv.app"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+}
+EOF
+        fi
+
+        echo "App module validated."
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Build APK
+      run: |
+        cd project
+        chmod +x gradlew
+        ./gradlew assembleDebug --stacktrace
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: EgzeTvPlus-APK
+        path: project/app/build/outputs/apk/debug/*.apk
