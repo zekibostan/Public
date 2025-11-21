@@ -103,7 +103,7 @@ jobs:
       - name: 4. ChannelsSearchFragment.kt'yi Duzelt (Girinti ve Yapısal Hata Giderildi)
         run: |
           echo "ChannelsSearchFragment.kt dosyasi duzeltiliyor..."
-          cat <<'EOF' > tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
+          cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
           package com.egze.tvplus
           import androidx.leanback.app.SearchSupportFragment
           import androidx.leanback.widget.ArrayObjectAdapter
@@ -154,7 +154,7 @@ jobs:
                         rowsAdapter.add(ListRow(HeaderItem("Arama Sonuçları"), rowAdapter))
                     }
                 } catch (ex:Exception) {
-                    Log.e("ChannelsSearch", "Search error: ${ex.message}")
+                    Log.e("ChannelsSearch", "Search error: \${ex.message}")
                 }
               }
 
@@ -170,10 +170,10 @@ jobs:
                 }
               }
           }
-          EOF
+EOF
 
       # 5. app/build.gradle Dosyasini Yeniden Olustur (Ayrica dogru)
-      - name: 5. app/build.gradle Dosyasini Yeniden Olustur
+      - name: 5. app\/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
           rm tv_project/app/build.gradle
