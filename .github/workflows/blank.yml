@@ -33,55 +33,36 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.core.content.ContextCompat
-import androidx.leanback.app.BrowseSupportFragment
-import androidx.leanback.widget.ArrayObjectAdapter
-import androidx.leanback.widget.HeaderItem
-import androidx.leanback.widget.ListRow
-import androidx.leanback.widget.ListRowPresenter
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.egze.tvplus.api.RetrofitClient
-import com.egze.tvplus.data.ChannelsRepository
-import com.egze.tvplus.presenter.ChannelPresenter
-import kotlinx.coroutines.CoroutineExceptionHandler
+import androidx.leanback.app.BrowseSupportFragment
+import androidx.leanback.widget.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ChannelsFragment : BrowseSupportFragment() {
 
-    private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        title = "EgzeTv+"
-        headersState = HEADERS_DISABLED
-        adapter = rowsAdapter
-
-        setOnSearchClickedListener {
-            val intent = Intent(requireContext(), SearchActivity::class.java)
-            ContextCompat.startActivity(requireContext(), intent, null)
-        }
-
-        fetchChannels()
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
+        title = "Kanallar"
+        loadChannels()
     }
 
-    private fun fetchChannels() {
-        val handler = CoroutineExceptionHandler { _, ex ->
-            Log.e("ChannelsFragment", "API error: ${ex.message}")
-        }
+    private fun loadChannels() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val grouped = ChannelsRepository.groupByCategory()
+            withContext(Dispatchers.Main) {
+                val cardPresenter = ChannelCardPresenter()
+                val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
+                adapter = rowsAdapter
 
-        lifecycleScope.launch(handler) {
-            val resp = RetrofitClient.api.getChannels()
-            val channels = resp.channels.filter { it.platform_android == "1" }
-            ChannelsRepository.channels = channels
-
-            val grouped = channels.groupBy { it.description ?: "Diğer" }
-            val cardPresenter = ChannelPresenter(requireContext())
-            rowsAdapter.clear()
-
-            for ((category, list) in grouped) {
-                val header = HeaderItem(category)
-                val rowAdapter = ArrayObjectAdapter(cardPresenter)
-                list.forEach { rowAdapter.add(it) }
-                rowsAdapter.add(ListRow(header, rowAdapter))
+                for ((category, list) in grouped) {
+                    val header = HeaderItem(category)
+                    val rowAdapter = ArrayObjectAdapter(cardPresenter)
+                    list.forEach { rowAdapter.add(it) }
+                    rowsAdapter.add(ListRow(header, rowAdapter))
+                }
             }
         }
     }
