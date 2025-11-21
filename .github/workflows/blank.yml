@@ -153,7 +153,7 @@ jobs:
               rowsAdapter.add(ListRow(HeaderItem("Arama Sonuçları"), rowAdapter))
             }
         } catch (ex:Exception) {
-            Log.e("ChannelsSearch", "Search error: \${ex.message}")
+            Log.e("ChannelsSearch", "Search error:\${ex.message}")
         }
       }
 
