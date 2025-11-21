@@ -62,3 +62,4 @@ jobs:
         with:
           name: EgzeTvPlus-APK
           path: project/app/build/outputs/apk/debug/*.apk
+
