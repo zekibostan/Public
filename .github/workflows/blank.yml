@@ -21,7 +21,6 @@ jobs:
           unzip tv.zip -d tv_project
           
       - name: 3. gradlew'ye Calistirma Izni Ver (chmod +x)
-        # gradlew dosyasina calistirma izni verir (tv_project altinda oldugu dogrulandi)
         run: chmod +x tv_project/gradlew
           
       - name: 4. Java 17 Kurulumu
@@ -29,29 +28,33 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+      
+      # 🚀 KRİTİK ADIM: Android SDK Lisanslarini Kabul Etme
+      - name: 5. Android SDK Lisanslarini Kabul Et
+        run: |
+          # Bu komut, gerekli tum Android SDK lisanslarini otomatik kabul eder.
+          yes | sdkmanager --licenses || true 
+        env:
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
           
-      # 5. Gradle Onbellegini Yapilandir (Cache adimini baslikta degistirdim, icerik ayni)
-      - name: 5. Gradle Onbellegini Yapilandir
+      - name: 6. Gradle Onbellegini Yapilandir
         uses: actions/cache@v3
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          # 'tv_project' klasorunu dogrudan kullaniyoruz
           key: ${{ runner.os }}-gradle-${{ hashFiles('tv_project/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
             
-      # 🚀 KRITIK GÜNCELLEME: assembleDebug komutuna --stacktrace eklendi
-      - name: 6. Debug (Hata Ayiklama) APK'sini Olustur
+      # 🛠️ GÜNCELLEME: Debug APK'sini Olustur (cd komutu kaldirildi, direk yol kullaniliyor)
+      - name: 7. Debug (Hata Ayiklama) APK'sini Olustur
         run: |
-          echo "Proje kök dizinine gidiliyor ve Gradle çalıştırılıyor..."
-          cd tv_project
-          # --stacktrace ile hata olmasi durumunda detayli log aliyoruz.
-          ./gradlew assembleDebug --stacktrace
+          echo "Gradle çalıştırılıyor..."
+          # cd komutu olmadan, gradlew dosyasina dogrudan erisim saglaniyor
+          ./tv_project/gradlew assembleDebug --stacktrace
           
-      # 7. Olusan APK'yi Yukle (Artifact)
-      - name: 7. Olusan APK'yi Yukle (Artifact)
+      - name: 8. Olusan APK'yi Yukle (Artifact)
         uses: actions/upload-artifact@v4 
         with:
           name: android-tv-apk-debug
