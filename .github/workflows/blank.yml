@@ -40,7 +40,7 @@ jobs:
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
           rm -f tv_project/app/build.gradle
           # app/build.gradle dosyasını yeniden oluşturmak için tek satırlık echo/cat kullan
-          cat > tv_project/app/build.gradle <<'EOT'
+          cat > tv_project/app/build.gradle <<EOT
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
