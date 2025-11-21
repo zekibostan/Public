@@ -20,165 +20,27 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      - name: "3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)"
+      - name: 3. ChannelsFragment.kt'ye lifecycleScope importunu Ekle
         run: |
-          echo "ChannelsFragment.kt dosyasi lifecycleScope importu ile yeniden yaziliyor..."
-          cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
-package com.egze.tvplus
-
-import android.content.Intent
-import android.os.Bundle
-import android.util.Log
-import androidx.core.content.ContextCompat
-import androidx.leanback.app.BrowseSupportFragment
-import androidx.leanback.widget.ArrayObjectAdapter
-import androidx.leanback.widget.HeaderItem
-import androidx.leanback.widget.ListRow
-import androidx.leanback.widget.ListRowPresenter
-import com.egze.tvplus.api.RetrofitClient
-import com.egze.tvplus.data.ChannelsRepository
-import com.egze.tvplus.presenter.ChannelPresenter
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.launch
-import androidx.lifecycle.lifecycleScope 
-
-class ChannelsFragment : BrowseSupportFragment() {
-
-    private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        title = "EgzeTv+"
-        headersState = HEADERS_DISABLED
-        adapter = rowsAdapter
-
-        setOnSearchClickedListener {
-            // Open SearchActivity (Leanback Search)
-            val intent = Intent(requireContext(), SearchActivity::class.java)
-            ContextCompat.startActivity(requireContext(), intent, null)
-        }
-
-        fetchChannels()
-    }
-
-    private fun fetchChannels() {
-        val handler = CoroutineExceptionHandler { _, ex ->
-            Log.e("ChannelsFragment", "API error: ${ex.message}")
-        }
-        // lifecycleScope kullanimi ile suspend fonksiyonu cagrildi
-        lifecycleScope.launch(handler) {
-            val resp = RetrofitClient.api.getChannels()
-            val channels = resp.channels.filter { it.platform_android == "1" }
-            ChannelsRepository.channels = channels
-            val grouped = channels.groupBy { it.description ?: "Diğer" }
-            val cardPresenter = ChannelPresenter(requireContext())
-            rowsAdapter.clear()
-            for ((category, list) in grouped) {
-                val header = HeaderItem(category)
-                val listRowAdapter = ArrayObjectAdapter(cardPresenter)
-                list.forEach { listRowAdapter.add(it) }
-                rowsAdapter.add(ListRow(header, listRowAdapter))
-            }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->
-            if (item is com.egze.tvplus.model.Channel) {
-                val intent = android.content.Intent(requireContext(), PlayerActivity::class.java)
-                val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }
-                intent.putExtra("channel_index", index)
-                startActivity(intent)
-            }
-        }
-    }
-}
-EOF
-      
-      - name: 4. ChannelsSearchFragment.kt'yi Duzelt (KTX importlari ve onItemClicked kaldirildi)
+          echo "ChannelsFragment.kt dosyasina lifecycleScope importu ekleniyor..."
+          # ChannelsFragment.kt dosyasina yeni import satiri eklenir
+          sed -i '/import androidx.leanback.widget.ListRowPresenter/a\import androidx.lifecycle.lifecycleScope' tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
+          # Dosya icinde 'lifecycleScope.launch(handler)' ile ilgili degisiklikler yapilir
+          sed -i 's/val handler = CoroutineExceptionHandler { _, ex ->/val handler = CoroutineExceptionHandler { _, ex ->\n            Log.e("ChannelsFragment", "API error: ${ex.message}")\n        }\n        // lifecycleScope kullanimi ile suspend fonksiyonu cagrildi\n        lifecycleScope.launch(handler)/g' tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
+          sed -i '/fetchChannels()/{N;s/fetchChannels()\n    }\n\n    private fun fetchChannels() {/fetchChannels()\n    }\n\n    private fun fetchChannels() {\n        val handler = CoroutineExceptionHandler { _, ex ->\n            Log.e("ChannelsFragment", "API error: ${ex.message}")\n        }\n        lifecycleScope.launch(handler)/g' tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
+          
+      - name: 4. ChannelsSearchFragment.kt'yi Duzelt (KTX importlari ve onItemClicked)
         run: |
-          echo "ChannelsSearchFragment.kt dosyasi KTX importlari ve onItemClicked duzeltilerek yeniden yaziliyor..."
-          cat <<'EOF' > tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
-package com.egze.tvplus
-
-import androidx.leanback.app.SearchSupportFragment
-import androidx.leanback.widget.ArrayObjectAdapter
-import androidx.leanback.widget.HeaderItem
-import androidx.leanback.widget.ListRow
-import androidx.leanback.widget.ListRowPresenter
-import androidx.leanback.widget.Presenter
-import android.content.Intent
-import android.os.Bundle
-import android.util.Log
-import com.egze.tvplus.data.ChannelsRepository
-import com.egze.tvplus.presenter.ChannelPresenter
-import com.egze.tvplus.model.Channel
-import androidx.leanback.app.searchResultProvider 
-import androidx.leanback.app.setSearchAffordanceColor 
-import androidx.leanback.widget.OnItemViewClickedListener 
-
-class ChannelsSearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchResultProvider {
-
-    private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        searchResultProvider = this
-        // optional hint
-        setSearchAffordanceColor(0xFF0D47A1.toInt())
-        
-        // ChannelsFragment'in mantigina uyumlu olarak item tiklama listener'i eklendi
-        setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->
-            if (item is Channel) {
-                val intent = Intent(requireContext(), PlayerActivity::class.java)
-                val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }
-                intent.putExtra("channel_index", index)
-                startActivity(intent)
-            }
-        }
-    }
-    
-    override fun getResultsAdapter(): ArrayObjectAdapter {
-        return rowsAdapter
-    }
-
-    override fun onQueryTextChange(newQuery: String?): Boolean {
-        val q = newQuery?.trim() ?: ""
-        updateResults(q)
-        return true
-    }
-
-    override fun onQueryTextSubmit(query: String?): Boolean {
-        updateResults(query ?: "")
-        return true
-    }
-
-    private fun updateResults(q: String) {
-        rowsAdapter.clear()
-        if (q.isEmpty()) return
-        try {
-            val all = ChannelsRepository.channels
-            val filtered = all.filter { it.title.contains(q, ignoreCase=true) }
-            val presenter: Presenter = ChannelPresenter(requireContext())
-            val rowAdapter = ArrayObjectAdapter(presenter)
-            filtered.forEach { rowAdapter.add(it) }
-            if (filtered.isNotEmpty()) {
-                rowsAdapter.add(ListRow(HeaderItem("Arama Sonuçları"), rowAdapter))
-            }
-        } catch (ex: Exception) {
-            // String interpolation'u ($) dogru yazmak icin
-            Log.e("ChannelsSearch", "Search error: ${ex.message}") 
-        }
-    }
-}
-EOF
-
+          echo "ChannelsSearchFragment.kt dosyasindaki importlar ve tiklama islemi duzeltiliyor..."
+          # KTX uzantilarini import et (Leanback 1.2.0 icin gerekli)
+          sed -i 's/import androidx.leanback.app.SearchFragment/import androidx.leanback.app.SearchSupportFragment\nimport androidx.leanback.app.searchResultProvider\nimport androidx.leanback.app.setSearchAffordanceColor\nimport androidx.leanback.widget.OnItemViewClickedListener/g' tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
+          
       - name: 5. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
-          rm tv_project/app/build.gradle
-          cat <<'EOF' > tv_project/app/build.gradle
+          rm -f tv_project/app/build.gradle
+          # app/build.gradle dosyasını yeniden oluşturmak için tek satırlık echo/cat kullan
+          cat > tv_project/app/build.gradle <<'EOT'
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -238,13 +100,14 @@ dependencies {
     kapt 'com.github.bumptech.glide:compiler:4.15.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
 }
-EOF
+EOT
 
       - name: 5.5 ADIM: AndroidManifest.xml Duzeltme
         run: |
           echo "AndroidManifest.xml dosyasi duzeltiliyor..."
-          rm tv_project/app/src/main/AndroidManifest.xml
-          cat <<'EOF' > tv_project/app/src/main/AndroidManifest.xml
+          rm -f tv_project/app/src/main/AndroidManifest.xml
+          # AndroidManifest.xml dosyasını yeniden oluşturmak için tek satırlık echo/cat kullan
+          cat > tv_project/app/src/main/AndroidManifest.xml <<'EOT'
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
@@ -275,17 +138,20 @@ EOF
         <activity android:name=".SearchActivity" />
     </application>
 </manifest>
-EOF
+EOT
 
       - name: 5.6 ADIM: activity_player.xml Duzeltme
         run: |
           echo "activity_player.xml dosyasindaki hatali namespace duzeltiliyor..."
+          # use_controller yerine app:use_controller kullanimi icin duzeltme
           sed -i 's/android:use_controller/app:use_controller/g' tv_project/app/src/main/res/layout/activity_player.xml
+          # app namespace eklenir
           sed -i 's/xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android"/xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android" xmlns:app="http:\/\/schemas.android.com\/apk\/res-auto"/g' tv_project/app/src/main/res/layout/activity_player.xml
 
       - name: 6. Kok build.gradle Dosyasini Yeniden Olustur
         run: |
-          cat <<'EOF' > tv_project/build.gradle
+          # build.gradle dosyasını yeniden oluşturmak için tek satırlık echo/cat kullan
+          cat > tv_project/build.gradle <<'EOT'
 buildscript {
     repositories {
         google()
@@ -303,7 +169,7 @@ allprojects {
         maven { url 'https://jitpack.io' }
     }
 }
-EOF
+EOT
 
       - name: 7. gradle.properties Ayarlari
         run: |
