@@ -20,21 +20,32 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      - name: 3. Java 17 Kurulumu
+      # 🚀 KRİTİK ÇÖZÜM ADIMI: AndroidX destegini etkinlestiriyoruz
+      - name: 3. AndroidX Destegini Etkinlestir
+        run: |
+          # gradle.properties dosyasi yoksa olusturur, varsa dokunmaz.
+          touch tv_project/gradle.properties
+          
+          # Log'daki hatayi cozen satir: AndroidX'i etkinlestir.
+          echo "android.useAndroidX=true" >> tv_project/gradle.properties
+          
+          # Eski bagimliliklar icin uyumluluk katmani olan Jetifier'i de etkinlestiriyoruz.
+          echo "android.enableJetifier=true" >> tv_project/gradle.properties
+          echo "Gerekli AndroidX ve Jetifier ozellikleri tv_project/gradle.properties dosyasina eklendi."
+          
+      - name: 4. Java 17 Kurulumu
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 🚨 KRİTİK ADIM: Compile SDK 34'ü garantili kuruyoruz.
-      - name: 4. Gerekli Android SDK (34) Kurulumu
+      - name: 5. Gerekli Android SDK (34) Kurulumu
         uses: android-actions/setup-android@v3
         with:
           api-level: 34
-          # Bu projenin ihtiyaci olan Kotlin Toolchain'i ayarliyoruz
           build-tools: '34.0.0'
 
-      - name: 5. Android Lisanslarini Olustur
+      - name: 6. Android Lisanslarini Olustur
         run: |
           mkdir -p $ANDROID_HOME/licenses
           echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
@@ -44,20 +55,19 @@ jobs:
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
           
-      # Gradle 8.1.1 kullanmaya devam ediyoruz, cunku projenizin istegi bu.
-      - name: 6. Gradle Kurulumu (8.1.1 - Proje Uyumu)
+      - name: 7. Gradle Kurulumu (8.1.1 - Proje Uyumu)
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.1.1' 
           
-      - name: 7. Debug APK'sini Olustur (Direkt Gradle Komutu)
+      - name: 8. Debug APK'sini Olustur (Direkt Gradle Komutu)
         run: |
           echo "Final build denemesi baslatiliyor..."
           cd tv_project
           # gradlew eksik oldugu icin 'gradle' komutunu kullaniyoruz.
           gradle assembleDebug --stacktrace --warning-mode all
           
-      - name: 8. Olusan APK'yi Yukle (Artifact)
+      - name: 9. Olusan APK'yi Yukle (Artifact)
         uses: actions/upload-artifact@v4 
         with:
           name: android-tv-apk-debug
