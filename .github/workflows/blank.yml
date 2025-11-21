@@ -26,7 +26,8 @@ jobs:
       - name: 3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)
         run: |
           echo "ChannelsFragment.kt dosyasi lifecycleScope importu ile yeniden yaziliyor..."
-          cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
+          # HATA ÇÖZÜMÜ: 'EOF' kullanıldı
+          cat <<'EOF' > tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
           package com.egze.tvplus
 
           import android.content.Intent
@@ -97,13 +98,14 @@ jobs:
                   }
               }
           }
-          EOF
+EOF
       
       # 4. ChannelsSearchFragment.kt Dosyasini Duzeltilmis Haliyle Yeniden Olustur
       - name: 4. ChannelsSearchFragment.kt'yi Duzelt (KTX importlari ve onItemClicked kaldirildi)
         run: |
           echo "ChannelsSearchFragment.kt dosyasi KTX importlari ve onItemClicked duzeltilerek yeniden yaziliyor..."
-          cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
+          # HATA ÇÖZÜMÜ: 'EOF' kullanıldı
+          cat <<'EOF' > tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
           package com.egze.tvplus
 
           import androidx.leanback.app.SearchSupportFragment
@@ -131,7 +133,21 @@ jobs:
                   searchResultProvider = this
                   // optional hint
                   setSearchAffordanceColor(0xFF0D47A1.toInt())
+                  
+                  // ChannelsFragment'in mantigina uyumlu olarak item tiklama listener'i eklendi
+                  setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->
+                      if (item is Channel) {
+                          val intent = Intent(requireContext(), PlayerActivity::class.java)
+                          val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }
+                          intent.putExtra("channel_index", index)
+                          startActivity(intent)
+                      }
+                  }
               }
+              
+              // onItemClicked metodu burada onResume'a tasiyacagiz (ChannelsFragment'a uyumlu olmasi icin)
+              // Ancak SearchSupportFragment'larda bu listener'in onCreate'te kurulmasi da yaygindir.
+              // Simdilik onCreate'te kalsin.
 
               override fun getResultsAdapter(): ArrayObjectAdapter {
                   return rowsAdapter
@@ -161,33 +177,22 @@ jobs:
                           rowsAdapter.add(ListRow(HeaderItem("Arama Sonuçları"), rowAdapter))
                       }
                   } catch (ex: Exception) {
-                      Log.e("ChannelsSearch", "Search error: \${ex.message}")
+                      // String interpolation'u (Log.e icindeki $) dogru yazmak icin
+                      Log.e("ChannelsSearch", "Search error: \${ex.message}") 
                   }
               }
 
-              // HATA VEREN 'onItemClicked' metodu kaldırıldı. Yerine doğru listener onResume'a eklendi.
-              
-              override fun onResume() {
-                  super.onResume()
-                  setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->
-                      if (item is Channel) {
-                          val intent = Intent(requireContext(), PlayerActivity::class.java)
-                          val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }
-                          intent.putExtra("channel_index", index)
-                          startActivity(intent)
-                      }
-                  }
-              }
+              // 'onItemClicked' overrides nothing hatasini cozmek icin bu metot silindi, mantigi onCreate'e tasindi.
           }
-          EOF
+EOF
 
-      # 5. app/build.gradle Dosyasini Yeniden Olustur (Ayrica dogru)
+      # 5. app/build.gradle Dosyasini Yeniden Olustur
       - name: 5. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
           rm tv_project/app/build.gradle
-          
-          cat <<EOF > tv_project/app/build.gradle
+          # HATA ÇÖZÜMÜ: 'EOF' kullanıldı
+          cat <<'EOF' > tv_project/app/build.gradle
           plugins {
               id 'com.android.application'
               id 'org.jetbrains.kotlin.android'
@@ -247,15 +252,15 @@ jobs:
               kapt 'com.github.bumptech.glide:compiler:4.15.1'
               implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
           }
-          EOF
+EOF
 
       # 5.5 ADIM: AndroidManifest.xml Duzeltme
       - name: 5.5 AndroidManifest.xml Duzelt
         run: |
           echo "AndroidManifest.xml dosyasi duzeltiliyor..."
           rm tv_project/app/src/main/AndroidManifest.xml
-          
-          cat <<EOF > tv_project/app/src/main/AndroidManifest.xml
+          # HATA ÇÖZÜMÜ: 'EOF' kullanıldı
+          cat <<'EOF' > tv_project/app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
@@ -286,7 +291,7 @@ jobs:
                   <activity android:name=".SearchActivity" />
               </application>
           </manifest>
-          EOF
+EOF
 
       # 5.6 ADIM: activity_player.xml Duzeltme
       - name: 5.6 activity_player.xml Duzelt
@@ -297,7 +302,8 @@ jobs:
 
       - name: 6. Kok build.gradle Dosyasini Yeniden Olustur
         run: |
-          cat <<EOF > tv_project/build.gradle
+          # HATA ÇÖZÜMÜ: 'EOF' kullanıldı
+          cat <<'EOF' > tv_project/build.gradle
           buildscript {
               repositories {
                   google()
@@ -315,7 +321,7 @@ jobs:
                   maven { url 'https://jitpack.io' }
               }
           }
-          EOF
+EOF
 
       - name: 7. gradle.properties Ayarlari
         run: |
