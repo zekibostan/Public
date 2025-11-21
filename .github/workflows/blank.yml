@@ -1,353 +1,523 @@
-name: Android TV APK Olusturma
+name: Full Android TV Build with Code Generation
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch: 
+    branches: [ main, master ]
+  workflow_dispatch: # Manuel çalıştırmaya izin verir
 
 jobs:
-  build_apk:
+  build:
     runs-on: ubuntu-latest
     
     steps:
-      - name: 1. Depoyu Cek
-        uses: actions/checkout@v4
-      
-      - name: 2. tv.zip Dosyasini Cikar
-        run: |
-          echo "ZIP dosyasi cikariliyor..."
-          mkdir -p tv_project
-          unzip tv.zip -d tv_project
-          
-      # 🚀 KRITIK KOD DOSYALARINI YENIDEN YAZMA ADIMLARI
-      
-      # 3. ChannelsFragment.kt Dosyasini Duzeltilmis Haliyle Yeniden Olustur
-      - name: 3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)
-        run: |
-          echo "ChannelsFragment.kt dosyasi lifecycleScope importu ile yeniden yaziliyor..."
-          cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
-          package com.egze.tvplus
+    - name: 📦 Projeyi Kontrol Et
+      uses: actions/checkout@v4
 
-          import android.content.Intent
-          import android.os.Bundle
-          import android.util.Log
-          import androidx.core.content.ContextCompat
-          import androidx.leanback.app.BrowseSupportFragment
-          import androidx.leanback.widget.ArrayObjectAdapter
-          import androidx.leanback.widget.HeaderItem
-          import androidx.leanback.widget.ListRow
-          import androidx.leanback.widget.ListRowPresenter
-          import com.egze.tvplus.api.RetrofitClient
-          import com.egze.tvplus.data.ChannelsRepository
-          import com.egze.tvplus.presenter.ChannelPresenter
-          import kotlinx.coroutines.CoroutineExceptionHandler
-          import kotlinx.coroutines.launch
-          import androidx.lifecycle.lifecycleScope // EK: lifecycleScope hatasini cozmek icin
-
-          class ChannelsFragment : BrowseSupportFragment() {
-
-              private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
-
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-                  title = "EgzeTv+"
-                  headersState = HEADERS_DISABLED
-                  adapter = rowsAdapter
-
-                  setOnSearchClickedListener {
-                      // Open SearchActivity (Leanback Search)
-                      val intent = Intent(requireContext(), SearchActivity::class.java)
-                      ContextCompat.startActivity(requireContext(), intent, null)
-                  }
-
-                  fetchChannels()
-              }
-
-              private fun fetchChannels() {
-                  val handler = CoroutineExceptionHandler { _, ex ->
-                      Log.e("ChannelsFragment", "API error: \${ex.message}")
-                  }
-                  // lifecycleScope kullanimi ile suspend fonksiyonu cagrildi
-                  lifecycleScope.launch(handler) {
-                      val resp = RetrofitClient.api.getChannels()
-                      val channels = resp.channels.filter { it.platform_android == "1" }
-                      ChannelsRepository.channels = channels
-                      val grouped = channels.groupBy { it.description ?: "Diğer" }
-                      val cardPresenter = ChannelPresenter(requireContext())
-                      rowsAdapter.clear()
-                      for ((category, list) in grouped) {
-                          val header = HeaderItem(category)
-                          val listRowAdapter = ArrayObjectAdapter(cardPresenter)
-                          list.forEach { listRowAdapter.add(it) }
-                          rowsAdapter.add(ListRow(header, listRowAdapter))
-                      }
-                  }
-              }
-
-              override fun onResume() {
-                  super.onResume()
-                  setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->
-                      if (item is com.egze.tvplus.model.Channel) {
-                          val intent = android.content.Intent(requireContext(), PlayerActivity::class.java)
-                          val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }
-                          intent.putExtra("channel_index", index)
-                          startActivity(intent)
-                      }
-                  }
-              }
-          }
-          EOF
-
-      # 4. ChannelsSearchFragment.kt Dosyasını Düzelten Adım (Gelişmiş Düzeltme)
-      - name: 4. ChannelsSearchFragment.kt'yi Duzelt (Girinti ve Yapısal Hata Giderildi)
-        run: |
-          echo "ChannelsSearchFragment.kt dosyasi duzeltiliyor..."
-          cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
-          package com.egze.tvplus
-          import androidx.leanback.app.SearchSupportFragment
-          import androidx.leanback.widget.ArrayObjectAdapter
-          import androidx.leanback.widget.HeaderItem
-          import androidx.leanback.widget.ListRow
-          import androidx.leanback.widget.ListRowPresenter
-          import androidx.leanback.widget.Presenter
-          import android.content.Intent
-          import android.os.Bundle
-          import android.util.Log
-          import com.egze.tvplus.data.ChannelsRepository
-          import com.egze.tvplus.presenter.ChannelPresenter
-          import com.egze.tvplus.model.Channel
-          import androidx.leanback.widget.OnItemViewClickedListener
+    - name: 🛠️ Java ve Android SDK Kurulumu
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: 'gradle'
         
-          class ChannelsSearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchResultProvider {
-            private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
-            override fun onCreate(savedInstanceState:Bundle?) {
-              super.onCreate(savedInstanceState)
-            }
+    - name: 📂 Proje Dizinlerini ve Yapılandırmayı Oluştur
+      run: |
+        # Temel Android TV dizin yapısını oluştur
+        mkdir -p app/src/main/kotlin/com/example/tvapp/model
+        mkdir -p app/src/main/kotlin/com/example/tvapp/network
+        mkdir -p app/src/main/kotlin/com/example/tvapp/ui/main
+        mkdir -p app/src/main/kotlin/com/example/tvapp/ui/playback
+        mkdir -p app/src/main/res/layout
+        mkdir -p app/src/main/AndroidManifest.xml
+        
+        # Build.gradle (Module) dosyasını oluştur
+        cat > app/build.gradle << EOF
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'kotlin-parcelize' // Parcelable desteği için
+}
 
-            override fun getResultsAdapter():ArrayObjectAdapter {
-              return rowsAdapter
-            }
+android {
+    namespace 'com.example.tvapp'
+    compileSdk 34
 
-            override fun onQueryTextChange(newQuery:String?):Boolean {
-              val q = newQuery?.trim() ?:""
-              updateResults(q)
-              return true
-            }
+    defaultConfig {
+        applicationId "com.example.tvapp"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
 
-            override fun onQueryTextSubmit(query:String?):Boolean {
-              updateResults(query ?:"")
-              return true
-            }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
 
-            private fun updateResults(q:String) {
-              rowsAdapter.clear()
-              if (q.isEmpty()) return
-              try {
-                val all = ChannelsRepository.channels
-                val filtered = all.filter { it.title.contains(q, ignoreCase=true) }
-                val presenter:Presenter=ChannelPresenter(requireContext())
-                val rowAdapter = ArrayObjectAdapter(presenter)
-                filtered.forEach { rowAdapter.add(it) }
-                  if (filtered.isNotEmpty()) {
-                    rowsAdapter.add(ListRow(HeaderItem("Arama Sonuçları"), rowAdapter))
-                  }
-              } catch (ex:Exception) {
-                Log.e("ChannelsSearch", "Search error:\${ex.message}")
-              }
-            }
+dependencies {
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.leanback:leanback:1.2.0'
+    // ExoPlayer
+    implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
+    implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1' 
+    // Retrofit
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    // Glide
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    // Coroutines
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    // Diğer temel kütüphaneler
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+}
+EOF
 
-            override fun onResume() {
-              super.onResume()
-              setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->
-                if (item is Channel) {
-                  val intent = Intent(requireContext(), PlayerActivity::class.java)
-                  val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }
-                  intent.putExtra("channel_index", index)
-                  startActivity(intent)
+        # settings.gradle.kts dosyasını oluştur (Gradle yapılandırması)
+        cat > settings.gradle.kts << EOF
+rootProject.name = "TVApp"
+include(":app")
+EOF
+
+        # AndroidManifest.xml'i oluştur
+        cat > app/src/main/AndroidManifest.xml << EOF
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Tvapp">
+        
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".ui.playback.PlaybackActivity" />
+
+    </application>
+</manifest>
+EOF
+
+        # MainActivity.kt'yi oluştur
+        cat > app/src/main/kotlin/com/example/tvapp/MainActivity.kt << EOF
+package com.example.tvapp
+
+import androidx.fragment.app.FragmentActivity
+import android.os.Bundle
+import com.example.tvapp.ui.main.MainFragment
+
+class MainActivity : FragmentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // MainFragment'ı konteynerin içine yerleştir
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .replace(android.R.id.content, MainFragment())
+                .commit()
+        }
+    }
+}
+// EOF
+EOF
+
+    - name: 📝 Kaynak Kod Dosyalarını Oluştur
+      # Kaynak kod dosyalarını (Kotlin ve XML) oluştur
+      run: |
+        cat > app/src/main/kotlin/com/example/tvapp/model/ChannelModel.kt << 'EOF_MODEL'
+package com.example.tvapp.model
+
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+import com.google.gson.annotations.SerializedName
+
+@Parcelize
+data class ChannelModel(
+    val id: String,
+    val title: String, 
+    val thumbImg: String,
+    val url: String, 
+    val description: String, 
+    @SerializedName("platform_android") val platformAndroid: String 
+) : Parcelable
+
+data class ApiResponse(
+    val status: String,
+    @SerializedName("updated_at") val updatedAt: String,
+    val channels: List<ChannelModel>
+)
+// EOF_MODEL
+EOF_MODEL
+        
+        cat > app/src/main/kotlin/com/example/tvapp/network/ApiService.kt << 'EOF_API'
+package com.example.tvapp.network
+
+import com.example.tvapp.model.ApiResponse
+import retrofit2.Response
+import retrofit2.http.GET
+
+interface ApiService {
+    @GET("app-api/channels.php") 
+    suspend fun getChannels(): Response<ApiResponse>
+}
+// EOF_API
+EOF_API
+
+        # MainFragment.kt ve CardPresenter.kt (MainFragment içinde) 
+        cat > app/src/main/kotlin/com/example/tvapp/ui/main/MainFragment.kt << 'EOF_MAIN'
+package com.example.tvapp.ui.main
+
+import android.content.Intent
+import android.os.Bundle
+import android.view.ViewGroup
+import androidx.leanback.app.BrowseSupportFragment
+import androidx.leanback.widget.*
+import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
+import com.example.tvapp.R
+import com.example.tvapp.model.ChannelModel
+import com.example.tvapp.network.ApiService
+import com.example.tvapp.ui.playback.PlaybackActivity
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import kotlinx.coroutines.launch
+import androidx.leanback.widget.ImageCardView // ImageCardView kullanımı için eklendi
+
+class MainFragment : BrowseSupportFragment() {
+
+    private val BASE_API_URL = "https://egze.org/tv/" 
+    private val BASE_LOGO_URL = "https://egze.org/tv/images/thumbnail_images/"
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        title = "Canlı TV Rehberi"
+        loadRows()
+        onItemViewClickedListener = ItemViewClickedListener()
+    }
+    
+    private fun loadRows() {
+        val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
+        val cardPresenter = CardPresenter(BASE_LOGO_URL)
+
+        lifecycleScope.launch {
+            try {
+                val retrofit = Retrofit.Builder()
+                    .baseUrl(BASE_API_URL)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+
+                val apiService = retrofit.create(ApiService::class.java)
+                val response = apiService.getChannels()
+                
+                if (response.isSuccessful && response.body() != null) {
+                    // Kategoriye göre gruplama
+                    val groupedChannels = response.body()!!.channels.groupBy { it.description }
+
+                    groupedChannels.forEach { (categoryTitle, channelList) ->
+                        val listRowAdapter = ArrayObjectAdapter(cardPresenter)
+                        channelList.forEach { listRowAdapter.add(it) }
+
+                        val header = HeaderItem(categoryTitle)
+                        rowsAdapter.add(ListRow(header, listRowAdapter))
+                    }
+                    adapter = rowsAdapter
                 }
-              }
+            } catch (e: Exception) {
+                // Hata yönetimi
+                println("API hatası: ${e.message}")
             }
-          }
-          EOF
-      # 5. app/build.gradle Dosyasini Yeniden Olustur (Ayrica dogru)
-      - name: 5. app/build.gradle Dosyasini Yeniden Olustur
-        run: |
-          echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
-          rm tv_project/app/build.gradle
-          
-          cat <<EOF > tv_project/app/build.gradle
-          plugins {
-              id 'com.android.application'
-              id 'org.jetbrains.kotlin.android'
-              id 'kotlin-kapt'
-              id 'kotlin-parcelize'
-          }
+        }
+    }
 
-          android {
-              namespace 'com.egze.tvplus'
-              compileSdk 35
+    private inner class ItemViewClickedListener : OnItemViewClickedListener {
+        override fun onItemClicked(
+            itemViewHolder: Presenter.ViewHolder?, item: Any?,
+            rowViewHolder: RowPresenter.ViewHolder?, row: Row?
+        ) {
+            if (item is ChannelModel) {
+                val intent = Intent(activity, PlaybackActivity::class.java).apply {
+                    putExtra("CHANNEL_DATA", item)
+                }
+                startActivity(intent)
+            }
+        }
+    }
+}
 
-              defaultConfig {
-                  applicationId "com.egze.tvplus"
-                  minSdk 21
-                  targetSdk 35
-                  versionCode 1
-                  versionName "1.0"
-              }
+class CardPresenter(private val logoBaseUrl: String) : Presenter() {
+    override fun onCreateViewHolder(parent: ViewGroup): ViewHolder {
+        val cardView = ImageCardView(parent.context).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+            // Kanal kart boyutlarını ayarla
+            setMainImageDimensions(300, 200) 
+        }
+        return ViewHolder(cardView)
+    }
 
-              buildTypes {
-                  release {
-                      minifyEnabled false
-                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-                  }
-              }
+    override fun onBindViewHolder(viewHolder: ViewHolder, item: Any) {
+        val channel = item as ChannelModel
+        val cardView = viewHolder.view as ImageCardView
+        
+        cardView.titleText = channel.title
+        cardView.contentText = channel.description 
+        
+        val fullLogoUrl = logoBaseUrl + channel.thumbImg
+        Glide.with(cardView.context)
+            .load(fullLogoUrl)
+            .centerInside() // Resmi kart boyutlarına sığdır
+            .into(cardView.mainImageView)
+    }
 
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-              kotlinOptions {
-                  jvmTarget = "17"
-              }
-          }
-          
-          kapt {
-              correctErrorTypes = true
-          }
+    override fun onUnbindViewHolder(viewHolder: ViewHolder) { 
+        val cardView = viewHolder.view as ImageCardView
+        cardView.mainImage = null // Hafıza temizliği
+    }
+}
+// EOF_MAIN
+EOF_MAIN
 
-          dependencies {
-              implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
-              implementation 'androidx.core:core-ktx:1.9.0'
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'androidx.leanback:leanback:1.2.0'
-              
-              // Coroutine ve lifecycleScope uzantilari
-              implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
-              implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
-              implementation "androidx.fragment:fragment-ktx:1.6.2"    
-              implementation "androidx.activity:activity-ktx:1.8.2"    
-              
-              implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
-              implementation 'com.squareup.retrofit2:retrofit:2.9.0'
-              implementation 'com.squareup.retrofit2:converter-moshi:2.9.0'
-              implementation 'com.squareup.moshi:moshi-kotlin:1.15.0'
-              implementation 'com.github.bumptech.glide:glide:4.15.1'
-              kapt 'com.github.bumptech.glide:compiler:4.15.1'
-              implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
-          }
-          EOF
+        # PlaybackActivity.kt
+        cat > app/src/main/kotlin/com/example/tvapp/ui/playback/PlaybackActivity.kt << 'EOF_PLAYBACK'
+package com.example.tvapp.ui.playback
 
-      # 5.5 ADIM: AndroidManifest.xml Duzeltme
-      - name: 5.5 AndroidManifest.xml Duzelt
-        run: |
-          echo "AndroidManifest.xml dosyasi duzeltiliyor..."
-          rm tv_project/app/src/main/AndroidManifest.xml
-          
-          cat <<EOF > tv_project/app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-feature android:name="android.software.leanback" android:required="true" />
-              <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-          
-              <application
-                  android:allowBackup="true"
-                  android:icon="@mipmap/ic_launcher"
-                  android:label="@string/app_name"
-                  android:supportsRtl="true"
-                  android:theme="@style/AppTheme">
-                  
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:icon="@mipmap/ic_launcher"
-                      android:label="@string/app_name"
-                      android:logo="@mipmap/ic_launcher"
-                      android:screenOrientation="landscape">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-                  
-                  <activity android:name=".PlayerActivity" />
-                  <activity android:name=".SearchActivity" />
-              </application>
-          </manifest>
-          EOF
+import android.app.Activity
+import android.net.Uri
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.KeyEvent
+import android.view.View
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
+import com.bumptech.glide.Glide
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.source.hls.HlsMediaSource
+import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
+import com.example.tvapp.R
+import com.example.tvapp.model.ChannelModel
 
-      # 5.6 ADIM: activity_player.xml Duzeltme
-      - name: 5.6 activity_player.xml Duzelt
-        run: |
-          echo "activity_player.xml dosyasindaki hatali namespace duzeltiliyor..."
-          sed -i 's/android:use_controller/app:use_controller/g' tv_project/app/src/main/res/layout/activity_player.xml
-          sed -i 's/xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android"/xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android" xmlns:app="http:\/\/schemas.android.com\/apk\/res-auto"/g' tv_project/app/src/main/res/layout/activity_player.xml
+class PlaybackActivity : Activity() {
+    private lateinit var player: ExoPlayer
+    private lateinit var playerView: PlayerView
+    private lateinit var channelData: ChannelModel
+    private lateinit var infoOverlay: ConstraintLayout
+    private lateinit var overlayTitle: TextView
+    private lateinit var overlayCategory: TextView
+    private lateinit var overlayLogo: ImageView
+    
+    private val hideHandler = Handler(Looper.getMainLooper())
+    private val HIDE_DELAY_MS = 3000L // 3 saniye
+    private val BASE_LOGO_URL = "https://egze.org/tv/images/thumbnail_images/"
 
-      - name: 6. Kok build.gradle Dosyasini Yeniden Olustur
-        run: |
-          cat <<EOF > tv_project/build.gradle
-          buildscript {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-              dependencies {
-                  classpath "com.android.tools.build:gradle:8.6.0"
-                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
-              }
-          }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-                  maven { url 'https://jitpack.io' }
-              }
-          }
-          EOF
+    private val hideRunnable = Runnable { hideOverlay() }
 
-      - name: 7. gradle.properties Ayarlari
-        run: |
-          touch tv_project/gradle.properties
-          echo "android.useAndroidX=true" >> tv_project/gradle.properties
-          echo "android.enableJetifier=true" >> tv_project/gradle.properties
-          echo "org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8" >> tv_project/gradle.properties
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_playback)
+        
+        // View Tanımlamaları
+        playerView = findViewById(R.id.player_view)
+        infoOverlay = findViewById(R.id.info_overlay)
+        overlayTitle = findViewById(R.id.overlay_title)
+        overlayCategory = findViewById(R.id.overlay_category)
+        overlayLogo = findViewById(R.id.overlay_logo)
+        
+        // Veriyi al
+        channelData = intent.getParcelableExtra("CHANNEL_DATA") ?: run { finish(); return }
+        
+        initializePlayer(channelData.url)
+        showOverlay(channelData) 
+    }
+    
+    private fun initializePlayer(hlsUrl: String) {
+        player = ExoPlayer.Builder(this).build()
+        playerView.player = player
+        
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+        val mediaSource = HlsMediaSource.Factory(httpDataSourceFactory)
+            .createMediaSource(MediaItem.fromUri(Uri.parse(hlsUrl)))
 
-      - name: 8. Java 17 Kurulumu
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+        player.setMediaSource(mediaSource)
+        player.prepare()
+        player.play()
+    }
 
-      - name: 9. Gerekli Android SDK (35) Kurulumu
-        uses: android-actions/setup-android@v3
-        with:
-          api-level: 35
-          build-tools: '35.0.0'
+    private fun showOverlay(data: ChannelModel) {
+        overlayTitle.text = data.title
+        overlayCategory.text = data.description
+        
+        val fullLogoUrl = BASE_LOGO_URL + data.thumbImg
+        Glide.with(this).load(fullLogoUrl).into(overlayLogo)
 
-      - name: 10. Android Lisanslarini Olustur
-        run: |
-          mkdir -p $ANDROID_HOME/licenses
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_HOME/licenses/android-sdk-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
-          echo "601085b94cd77f0b54ff86406957099ebe79c4d6" > $ANDROID_HOME/licenses/android-googletv-license
-        env:
-          ANDROID_HOME: /usr/local/lib/android/sdk
-          
-      - name: 11. Gradle Kurulumu (8.10.2)
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.10.2' 
-          
-      - name: 12. Debug APK'sini Olustur
-        run: |
-          echo "Build baslatiliyor..."
-          cd tv_project
-          gradle assembleDebug --stacktrace --warning-mode all --refresh-dependencies
-          
-      - name: 13. Olusan APK'yi Yukle (Artifact)
-        uses: actions/upload-artifact@v4 
-        with:
-          name: android-tv-apk-debug
-          path: tv_project/app/build/outputs/apk/debug/*.apk
+        infoOverlay.apply {
+            visibility = View.VISIBLE
+            alpha = 0f
+            animate().alpha(1f).setDuration(400).start() 
+        }
+        
+        hideHandler.removeCallbacks(hideRunnable)
+        hideHandler.postDelayed(hideRunnable, HIDE_DELAY_MS) 
+    }
+
+    private fun hideOverlay() {
+        infoOverlay.apply {
+            animate().alpha(0f).setDuration(400).withEndAction {
+                visibility = View.GONE
+            }.start()
+        }
+    }
+    
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        return when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                if (infoOverlay.visibility == View.GONE || infoOverlay.alpha == 0f) {
+                    showOverlay(channelData)
+                } else {
+                    hideOverlay()
+                }
+                true
+            }
+            // Kanal değiştirme tuşları (sol/sağ) burada işlenmelidir
+            else -> super.onKeyDown(keyCode, event)
+        }
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        player.pause()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        player.release()
+        hideHandler.removeCallbacks(hideRunnable)
+    }
+}
+// EOF_PLAYBACK
+EOF_PLAYBACK
+
+        # activity_playback.xml
+        cat > app/src/main/res/layout/activity_playback.xml << 'EOF_XML'
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <com.google.android.exoplayer2.ui.PlayerView
+        android:id="@+id/player_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:use_controller="false"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/info_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="24dp"
+        android:background="#99000000"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <ImageView
+            android:id="@+id/overlay_logo"
+            android:layout_width="100dp"
+            android:layout_height="60dp"
+            android:src="@drawable/ic_launcher_background"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/live_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CANLI YAYIN"
+            android:textColor="#FF0000"
+            android:textSize="18sp"
+            android:layout_marginStart="24dp"
+            app:layout_constraintStart_toEndOf="@id/overlay_logo"
+            app:layout_constraintTop_toTopOf="@id:overlay_logo" />
+            
+        <TextView
+            android:id="@+id/overlay_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Kanal Adı"
+            android:textColor="@android:color/white"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="@id:live_label"
+            app:layout_constraintTop_toBottomOf="@id:live_label" />
+
+        <TextView
+            android:id="@+id/overlay_category"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Kategori"
+            android:textColor="@android:color/darker_gray"
+            android:textSize="18sp"
+            app:layout_constraintStart_toStartOf="@id:overlay_title"
+            app:layout_constraintTop_toBottomOf="@id:overlay_title" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
+EOF_XML
+
+        # Basit bir strings.xml dosyası ekle
+        cat > app/src/main/res/values/strings.xml << 'EOF_STRINGS'
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Android TV IPTV</string>
+    <string name="browse_title">Kanallar</string>
+</resources>
+EOF_STRINGS
+        
+        # Gradle Wrapper'a çalıştırma izni ver
+        chmod +x gradlew
+        
+    - name: 🏗️ Hata Ayıklama (Debug) APK'sını Oluştur
+      # Tüm kod dosyaları oluşturulduktan sonra derleme işlemini başlatır
+      run: ./gradlew assembleDebug
+
+    - name: 📤 APK Dosyasını Yükle (Artifact)
+      # Oluşturulan APK dosyasını GitHub Actions'ın sonuç sayfasına yükler
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-tv-apk
+        path: app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 7
