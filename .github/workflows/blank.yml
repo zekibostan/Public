@@ -20,15 +20,74 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # 🚀 KRİTİK TAMİR ADIMI: Yanlış versiyonları ve eksik depolari duzeltiyoruz
-      - name: 3. Proje Dosyalarini Otomatik Tamir Et
+      # 🚀 KRİTİK ADIM: app/build.gradle dosyasini TAMAMEN SIFIRDAN YAZIYORUZ
+      # Bu sayede hatali surumler, eksik depolar veya bozuk yapilar tamamen duzeliyor.
+      - name: 3. app/build.gradle Dosyasini Yeniden Olustur
         run: |
-          echo "--- 1. Yanlis ExoPlayer surumu duzeltiliyor ---"
-          # exoplayer:2.20.0 (olmayan surum) -> exoplayer:2.19.1 (var olan surum) olarak degistiriliyor
-          sed -i 's/exoplayer:2.20.0/exoplayer:2.19.1/g' tv_project/app/build.gradle
+          echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
+          rm tv_project/app/build.gradle
           
-          echo "--- 2. Root build.gradle dosyasi yeniden yaziliyor (Jitpack ekleniyor) ---"
-          # Mevcut dosyayi ezip, gerekli tum depolari iceren dogru yapiyi yaziyoruz
+          cat <<EOF > tv_project/app/build.gradle
+          plugins {
+              id 'com.android.application'
+              id 'org.jetbrains.kotlin.android'
+              id 'kotlin-kapt'
+          }
+
+          android {
+              namespace 'com.egze.tvplus'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.egze.tvplus"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+
+          dependencies {
+              implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
+              // HATA DUZELTME: core-ktx surumu 1.11.0 yerine 1.9.0 yapildi (uyumluluk icin)
+              implementation 'androidx.core:core-ktx:1.9.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'androidx.leanback:leanback:1.2.0'
+              
+              // HATA DUZELTME: exoplayer surumu 2.19.1 yapildi (2.20.0 yoktur)
+              implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
+              
+              implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+              implementation 'com.squareup.retrofit2:converter-moshi:2.9.0'
+              implementation 'com.squareup.moshi:moshi-kotlin:1.15.0'
+              
+              implementation 'com.github.bumptech.glide:glide:4.15.1'
+              kapt 'com.github.bumptech.glide:compiler:4.15.1'
+              
+              implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+          }
+          EOF
+          
+          echo "✅ app/build.gradle basariyla yenilendi."
+
+      # Root build.gradle dosyasini da Jitpack destegi ile yeniliyoruz
+      - name: 4. Kok build.gradle Dosyasini Yeniden Olustur
+        run: |
           cat <<EOF > tv_project/build.gradle
           buildscript {
               repositories {
@@ -45,31 +104,31 @@ jobs:
                   google()
                   mavenCentral()
                   maven { url 'https://jitpack.io' }
-                  jcenter() 
               }
           }
           EOF
-          
-          echo "--- 3. AndroidX ve Jetifier ayarlari ekleniyor ---"
+
+      - name: 5. gradle.properties Ayarlari
+        run: |
           touch tv_project/gradle.properties
           echo "android.useAndroidX=true" >> tv_project/gradle.properties
           echo "android.enableJetifier=true" >> tv_project/gradle.properties
-          
-          echo "--- Tum duzeltmeler tamamlandi ---"
+          # Bellek hatasi almamak icin JVM bellegini artiriyoruz
+          echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> tv_project/gradle.properties
 
-      - name: 4. Java 17 Kurulumu
+      - name: 6. Java 17 Kurulumu
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 5. Gerekli Android SDK (34) Kurulumu
+      - name: 7. Gerekli Android SDK (34) Kurulumu
         uses: android-actions/setup-android@v3
         with:
           api-level: 34
           build-tools: '34.0.0'
 
-      - name: 6. Android Lisanslarini Olustur
+      - name: 8. Android Lisanslarini Olustur
         run: |
           mkdir -p $ANDROID_HOME/licenses
           echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
@@ -79,19 +138,19 @@ jobs:
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
           
-      - name: 7. Gradle Kurulumu (8.1.1)
+      - name: 9. Gradle Kurulumu (8.1.1)
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.1.1' 
           
-      - name: 8. Debug APK'sini Olustur
+      - name: 10. Debug APK'sini Olustur
         run: |
           echo "Build baslatiliyor..."
           cd tv_project
-          # --refresh-dependencies ile yeni ekledigimiz repolari kullanarak indirmeyi zorluyoruz
+          # --refresh-dependencies: Tum kutuphaneleri sifirdan indirir
           gradle assembleDebug --stacktrace --warning-mode all --refresh-dependencies
           
-      - name: 9. Olusan APK'yi Yukle (Artifact)
+      - name: 11. Olusan APK'yi Yukle (Artifact)
         uses: actions/upload-artifact@v4 
         with:
           name: android-tv-apk-debug
