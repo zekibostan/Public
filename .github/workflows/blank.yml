@@ -20,19 +20,43 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # KRİTİK ÇÖZÜM ADIMI: AndroidX destegini etkinlestiriyoruz
-      - name: 3. AndroidX Destegini Etkinlestir
+      # 🚀 KRİTİK TAMİR ADIMI: Yanlış versiyonları ve eksik depolari duzeltiyoruz
+      - name: 3. Proje Dosyalarini Otomatik Tamir Et
         run: |
-          # gradle.properties dosyasini olusturuyoruz/guncelliyoruz.
+          echo "--- 1. Yanlis ExoPlayer surumu duzeltiliyor ---"
+          # exoplayer:2.20.0 (olmayan surum) -> exoplayer:2.19.1 (var olan surum) olarak degistiriliyor
+          sed -i 's/exoplayer:2.20.0/exoplayer:2.19.1/g' tv_project/app/build.gradle
+          
+          echo "--- 2. Root build.gradle dosyasi yeniden yaziliyor (Jitpack ekleniyor) ---"
+          # Mevcut dosyayi ezip, gerekli tum depolari iceren dogru yapiyi yaziyoruz
+          cat <<EOF > tv_project/build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath "com.android.tools.build:gradle:8.1.1"
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+                  maven { url 'https://jitpack.io' }
+                  jcenter() 
+              }
+          }
+          EOF
+          
+          echo "--- 3. AndroidX ve Jetifier ayarlari ekleniyor ---"
           touch tv_project/gradle.properties
-          
-          # Hata logunda istenen ayar: AndroidX'i etkinlestir.
           echo "android.useAndroidX=true" >> tv_project/gradle.properties
-          
-          # Uyumlu olmasi icin Jetifier'i de etkinlestiriyoruz.
           echo "android.enableJetifier=true" >> tv_project/gradle.properties
-          echo "Gerekli AndroidX ve Jetifier ozellikleri tv_project/gradle.properties dosyasina eklendi."
           
+          echo "--- Tum duzeltmeler tamamlandi ---"
+
       - name: 4. Java 17 Kurulumu
         uses: actions/setup-java@v4
         with:
@@ -55,16 +79,16 @@ jobs:
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
           
-      - name: 7. Gradle Kurulumu (8.1.1 - Proje Uyumu)
+      - name: 7. Gradle Kurulumu (8.1.1)
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.1.1' 
           
-      - name: 8. Debug APK'sini Olustur (Bağımlılık Yenileme)
+      - name: 8. Debug APK'sini Olustur
         run: |
-          echo "Final build denemesi baslatiliyor..."
+          echo "Build baslatiliyor..."
           cd tv_project
-          # Bagimlilik hatasini asmak icin tum bagimliliklari yeniden indirmeye zorluyoruz.
+          # --refresh-dependencies ile yeni ekledigimiz repolari kullanarak indirmeyi zorluyoruz
           gradle assembleDebug --stacktrace --warning-mode all --refresh-dependencies
           
       - name: 9. Olusan APK'yi Yukle (Artifact)
