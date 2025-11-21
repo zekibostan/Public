@@ -20,9 +20,9 @@ jobs:
       # ZIP dosyasini 'tv_project' adli bir klasore cikarir.
       - name: 2. tv.zip Dosyasini Cikar
         run: |
-          echo "public/tv.zip dosyasini tv_project klasorune cikariyor..."
+          echo "tv.zip dosyasini tv_project klasorune cikariyor..."
           mkdir -p tv_project
-          unzip public/tv.zip -d tv_project
+          unzip tv.zip -d tv_project
           ls -R tv_project # Cikarilan dosyalari listele (Hata ayiklama icin faydali)
           
       # Android icin gerekli olan Java Development Kit'i (JDK) kurar.
