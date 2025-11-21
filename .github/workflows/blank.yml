@@ -21,9 +21,7 @@ jobs:
           unzip tv.zip -d tv_project
           
       # 🚀 KRITIK KOD DOSYALARINI YENIDEN YAZMA ADIMLARI
-      # NOT: Dosya icerikleri, YAML hata vermemesi icin sola sifirlandi.
       
-      # 3. ChannelsFragment.kt Dosyasini Duzeltilmis Haliyle Yeniden Olustur
       - name: 3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)
         run: |
           echo "ChannelsFragment.kt dosyasi lifecycleScope importu ile yeniden yaziliyor..."
@@ -44,7 +42,7 @@ import com.egze.tvplus.data.ChannelsRepository
 import com.egze.tvplus.presenter.ChannelPresenter
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
-import androidx.lifecycle.lifecycleScope // EK: lifecycleScope hatasini cozmek icin
+import androidx.lifecycle.lifecycleScope 
 
 class ChannelsFragment : BrowseSupportFragment() {
 
@@ -100,7 +98,6 @@ class ChannelsFragment : BrowseSupportFragment() {
 }
 EOF
       
-      # 4. ChannelsSearchFragment.kt Dosyasini Duzeltilmis Haliyle Yeniden Olustur
       - name: 4. ChannelsSearchFragment.kt'yi Duzelt (KTX importlari ve onItemClicked kaldirildi)
         run: |
           echo "ChannelsSearchFragment.kt dosyasi KTX importlari ve onItemClicked duzeltilerek yeniden yaziliyor..."
@@ -173,13 +170,12 @@ class ChannelsSearchFragment : SearchSupportFragment(), SearchSupportFragment.Se
             }
         } catch (ex: Exception) {
             // String interpolation'u ($) dogru yazmak icin
-            Log.e("ChannelsSearch", "Search error: \${ex.message}") 
+            Log.e("ChannelsSearch", "Search error: ${ex.message}") 
         }
     }
 }
 EOF
 
-      # 5. app/build.gradle Dosyasini Yeniden Olustur
       - name: 5. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
@@ -246,8 +242,7 @@ dependencies {
 }
 EOF
 
-      # 5.5 ADIM: AndroidManifest.xml Duzeltme
-      - name: 5.5 AndroidManifest.xml Duzelt
+      - name: 5.5 ADIM: AndroidManifest.xml Duzeltme
         run: |
           echo "AndroidManifest.xml dosyasi duzeltiliyor..."
           rm tv_project/app/src/main/AndroidManifest.xml
@@ -284,8 +279,7 @@ EOF
 </manifest>
 EOF
 
-      # 5.6 ADIM: activity_player.xml Duzeltme
-      - name: 5.6 activity_player.xml Duzelt
+      - name: 5.6 ADIM: activity_player.xml Duzeltme
         run: |
           echo "activity_player.xml dosyasindaki hatali namespace duzeltiliyor..."
           sed -i 's/android:use_controller/app:use_controller/g' tv_project/app/src/main/res/layout/activity_player.xml
