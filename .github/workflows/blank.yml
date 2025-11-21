@@ -11,16 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: "1. Depoyu Cek"
+      - name: 1. Depoyu Cek
         uses: actions/checkout@v4
 
-      - name: "2. tv.zip Dosyasini Cikar"
+      - name: 2. tv.zip Dosyasini Cikar
         run: |
           echo "ZIP dosyasi cikariliyor..."
           mkdir -p tv_project
           unzip tv.zip -d tv_project
 
-      - name: "3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)"
+      - name: 3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)
         run: |
           echo "ChannelsFragment.kt dosyasi lifecycleScope importu ile yeniden yaziliyor..."
           cat <<'EOF' > tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
