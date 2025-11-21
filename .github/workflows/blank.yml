@@ -20,10 +20,10 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      - name: 3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)
+      - name: "3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)"
         run: |
           echo "ChannelsFragment.kt dosyasi lifecycleScope importu ile yeniden yaziliyor..."
-          cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
+          cat <<'EOF' > tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
 package com.egze.tvplus
 
 import android.content.Intent
