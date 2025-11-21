@@ -100,24 +100,24 @@ jobs:
           EOF
 
       # 4. ChannelsSearchFragment.kt Dosyasını Düzelten Adım (Gelişmiş Düzeltme)
-      - name: 4. ChannelsSearchFragment.kt'yi Duzelt (Girinti ve Yapısal Hata Giderildi)
-run: |
-  echo "ChannelsSearchFragment.kt dosyasi duzeltiliyor..."
-  cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
-  package com.egze.tvplus
-  import androidx.leanback.app.SearchSupportFragment
-  import androidx.leanback.widget.ArrayObjectAdapter
-  import androidx.leanback.widget.HeaderItem
-  import androidx.leanback.widget.ListRow
-  import androidx.leanback.widget.ListRowPresenter
-  import androidx.leanback.widget.Presenter
-  import android.content.Intent
-  import android.os.Bundle
-  import android.util.Log
-  import com.egze.tvplus.data.ChannelsRepository
-  import com.egze.tvplus.presenter.ChannelPresenter
-  import com.egze.tvplus.model.Channel
-  import androidx.leanback.widget.OnItemViewClickedListener
+      - name: 4. ChannelsSearchFragment.kt'yi Duzelt (Girinti ve Yapısal Hata Giderildi)
+    run: |
+      echo "ChannelsSearchFragment.kt dosyasi duzeltiliyor..."
+      cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
+      package com.egze.tvplus
+      import androidx.leanback.app.SearchSupportFragment
+      import androidx.leanback.widget.ArrayObjectAdapter
+      import androidx.leanback.widget.HeaderItem
+      import androidx.leanback.widget.ListRow
+      import androidx.leanback.widget.ListRowPresenter
+      import androidx.leanback.widget.Presenter
+      import android.content.Intent
+      import android.os.Bundle
+      import android.util.Log
+      import com.egze.tvplus.data.ChannelsRepository
+      import com.egze.tvplus.presenter.ChannelPresenter
+      import com.egze.tvplus.model.Channel
+      import androidx.leanback.widget.OnItemViewClickedListener
         
     class ChannelsSearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchResultProvider {
       private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
@@ -169,7 +169,7 @@ run: |
         }
       }
     }
-  EOF
+    EOF
       # 5. app/build.gradle Dosyasini Yeniden Olustur (Ayrica dogru)
       - name: 5. app/build.gradle Dosyasini Yeniden Olustur
         run: |
