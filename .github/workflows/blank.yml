@@ -20,125 +20,149 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      - name: 3. ChannelsFragment.kt'yi Duzelt (sed ile import eklendi)
+      # 🚀 KRITIK KOD DUZELTMELERI BURADA BASLIYOR
+      
+      - name: 3. ChannelsFragment.kt Dosyasina Eksik Import Ekle
         run: |
-          echo "ChannelsFragment.kt dosyasina lifecycleScope importu ekleniyor..."
-          # ChannelsFragment.kt dosyasina yeni import satiri eklenir
-          sed -i '/import androidx.leanback.widget.ListRowPresenter/a\import androidx.lifecycle.lifecycleScope' tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
-          # fetchChannels fonksiyonu duzeltilir
-          sed -i 's/fetchChannels()/{N;s/fetchChannels()\n    }\n\n    private fun fetchChannels() {/fetchChannels()\n    }\n\n    private fun fetchChannels() {\n        val handler = CoroutineExceptionHandler { _, ex ->\n            Log.e("ChannelsFragment", "API error: ${ex.message}")\n        }\n        lifecycleScope.launch(handler)/g' tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
+          # lifecycleScope hatasini cozmek icin import eklendi
+          FILE="tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt"
+          sed -i '/import androidx.leanback.widget.ListRowPresenter/a import androidx.lifecycle.lifecycleScope' $FILE
+          echo "$FILE dosyasina lifecycleScope importu eklendi."
+      
+      - name: 4. ChannelsSearchFragment.kt Dosyasindaki Hatalari Duzelt
+        run: |
+          FILE="tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt"
           
-      - name: 4. ChannelsSearchFragment.kt'yi Duzelt (sed ile KTX importlari ve onItemClicked)
-        run: |
-          echo "ChannelsSearchFragment.kt dosyasindaki importlar ve tiklama islemi duzeltiliyor..."
-          # KTX uzantilarini import et
-          sed -i 's/import androidx.leanback.app.SearchFragment/import androidx.leanback.app.SearchSupportFragment\nimport androidx.leanback.app.searchResultProvider\nimport androidx.leanback.app.setSearchAffordanceColor\nimport androidx.leanback.widget.OnItemViewClickedListener/g' tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
-          # searchResultProvider atamasini duzelt
-          sed -i 's/super.onCreate(savedInstanceState)/super.onCreate(savedInstanceState)\n        searchResultProvider = this/g' tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
+          # Leanback KTX uzanti fonksiyonlari icin importlar eklendi (Hata 3 & 4)
+          sed -i '/import androidx.leanback.widget.Presenter/a import androidx.leanback.app.searchResultProvider' $FILE
+          sed -i '/import androidx.leanback.app.searchResultProvider/a import androidx.leanback.app.setSearchAffordanceColor' $FILE
 
+          # Hata 5: 'onItemClicked' overrides nothing metodunu sil ve mantigi onCreate'e tasi
+          
+          # onItemClicked mantigini bir degiskene kaydet (Intent ve startActivity kismi)
+          CLICK_LOGIC=$(awk '/override fun onItemClicked\(item: Any\?\) \{/,/^\s*\}/' $FILE | tail -n +2 | head -n -1)
+          
+          # Hatalı override fun onItemClicked methodunu sil
+          sed -i '/override fun onItemClicked(item: Any?)/,/}/d' $FILE
+          
+          # Mantigi onCreate icine setOnItemViewClickedListener olarak ekle
+          # NOTE: ChannelsFragment'ta onResume kullanilmasina ragmen, SearchFragment icin onCreate daha uygun olabilir.
+          # Ancak, ChannelsFragment'in kod mantigina uygun olarak listener'i onResume'a tasiyoruz.
+          
+          # Yeni setOnItemViewClickedListener mantigini ChannelsSearchFragment'a ekle
+          sed -i '/override fun onCreate(savedInstanceState: Bundle?) {/a\         setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->\n             if (item is Channel) {\n                 val intent = android.content.Intent(requireContext(), PlayerActivity::class.java)\n                 val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }\n                 intent.putExtra("channel_index", index)\n                 startActivity(intent)\n             }\n         }' $FILE
+
+          echo "$FILE dosyasindaki 3, 4 ve 5 numarali hatalar duzeltildi."
+
+      # 5. app/build.gradle Dosyasini Yeniden Olustur
       - name: 5. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
-          rm -f tv_project/app/build.gradle
-          cat > tv_project/app/build.gradle <<-'EOT'
-            plugins {
-                id 'com.android.application'
-                id 'org.jetbrains.kotlin.android'
-                id 'kotlin-kapt'
-                id 'kotlin-parcelize'
-            }
+          rm tv_project/app/build.gradle
+          
+          cat <<EOF > tv_project/app/build.gradle
+          plugins {
+              id 'com.android.application'
+              id 'org.jetbrains.kotlin.android'
+              id 'kotlin-kapt'
+              id 'kotlin-parcelize'
+          }
 
-            android {
-                namespace 'com.egze.tvplus'
-                compileSdk 35
+          android {
+              namespace 'com.egze.tvplus'
+              compileSdk 35
 
-                defaultConfig {
-                    applicationId "com.egze.tvplus"
-                    minSdk 21
-                    targetSdk 35
-                    versionCode 1
-                    versionName "1.0"
-                }
+              defaultConfig {
+                  applicationId "com.egze.tvplus"
+                  minSdk 21
+                  targetSdk 35
+                  versionCode 1
+                  versionName "1.0"
+              }
 
-                buildTypes {
-                    release {
-                        minifyEnabled false
-                        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-                    }
-                }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                  }
+              }
 
-                compileOptions {
-                    sourceCompatibility JavaVersion.VERSION_17
-                    targetCompatibility JavaVersion.VERSION_17
-                }
-                kotlinOptions {
-                    jvmTarget = "17"
-                }
-            }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+          
+          kapt {
+              correctErrorTypes = true
+          }
 
-            kapt {
-                correctErrorTypes = true
-            }
+          dependencies {
+              implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
+              implementation 'androidx.core:core-ktx:1.9.0'
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'androidx.leanback:leanback:1.2.0'
+              
+              // Coroutine ve lifecycleScope uzantilari
+              implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
+              implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
+              implementation "androidx.fragment:fragment-ktx:1.6.2"    
+              implementation "androidx.activity:activity-ktx:1.8.2"    
+              
+              implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
+              implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+              implementation 'com.squareup.retrofit2:converter-moshi:2.9.0'
+              implementation 'com.squareup.moshi:moshi-kotlin:1.15.0'
+              implementation 'com.github.bumptech.glide:glide:4.15.1'
+              kapt 'com.github.bumptech.glide:compiler:4.15.1'
+              implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+          }
+          EOF
 
-            dependencies {
-                implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
-                implementation 'androidx.core:core-ktx:1.9.0'
-                implementation 'androidx.appcompat:appcompat:1.6.1'
-                implementation 'androidx.leanback:leanback:1.2.0'
-                
-                # Coroutine ve lifecycleScope uzantilari
-                implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
-                implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
-                implementation "androidx.fragment:fragment-ktx:1.6.2"    
-                implementation "androidx.activity:activity-ktx:1.8.2"    
-                
-                implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
-                implementation 'com.squareup.retrofit2:retrofit:2.9.0'
-                implementation 'com.squareup.retrofit2:converter-moshi:2.9.0'
-                implementation 'com.squareup.moshi:moshi-kotlin:1.15.0'
-                implementation 'com.github.bumptech.glide:glide:4.15.1'
-                kapt 'com.github.bumptech.glide:compiler:4.15.1'
-                implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
-            }
-            EOT
-      - name: 5.5 ADIM: AndroidManifest.xml Duzeltme
+      # 5.5 ADIM: AndroidManifest.xml Duzeltme
+      - name: 5.5 AndroidManifest.xml Duzelt
         run: |
           echo "AndroidManifest.xml dosyasi duzeltiliyor..."
-          rm -f tv_project/app/src/main/AndroidManifest.xml
-          cat > tv_project/app/src/main/AndroidManifest.xml <<-'EOT'
-            <?xml version="1.0" encoding="utf-8"?>
-            <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-                <uses-permission android:name="android.permission.INTERNET" />
-                <uses-feature android:name="android.software.leanback" android:required="true" />
-                <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+          rm tv_project/app/src/main/AndroidManifest.xml
+          
+          cat <<EOF > tv_project/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-feature android:name="android.software.leanback" android:required="true" />
+              <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+          
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme">
+                  
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:icon="@mipmap/ic_launcher"
+                      android:label="@string/app_name"
+                      android:logo="@mipmap/ic_launcher"
+                      android:screenOrientation="landscape">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+                  
+                  <activity android:name=".PlayerActivity" />
+                  <activity android:name=".SearchActivity" />
+              </application>
+          </manifest>
+          EOF
 
-                <application
-                    android:allowBackup="true"
-                    android:icon="@mipmap/ic_launcher"
-                    android:label="@string/app_name"
-                    android:supportsRtl="true"
-                    android:theme="@style/AppTheme">
-                    
-                    <activity
-                        android:name=".MainActivity"
-                        android:exported="true"
-                        android:icon="@mipmap/ic_launcher"
-                        android:label="@string/app_name"
-                        android:logo="@mipmap/ic_launcher"
-                        android:screenOrientation="landscape">
-                        <intent-filter>
-                            <action android:name="android.intent.action.MAIN" />
-                            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                        </intent-filter>
-                    </activity>
-                    
-                    <activity android:name=".PlayerActivity" />
-                    <activity android:name=".SearchActivity" />
-                </application>
-            </manifest>
-EOT
-
-      - name: 5.6 ADIM: activity_player.xml Duzeltme
+      # 5.6 ADIM: activity_player.xml Duzeltme
+      - name: 5.6 activity_player.xml Duzelt
         run: |
           echo "activity_player.xml dosyasindaki hatali namespace duzeltiliyor..."
           sed -i 's/android:use_controller/app:use_controller/g' tv_project/app/src/main/res/layout/activity_player.xml
@@ -146,25 +170,25 @@ EOT
 
       - name: 6. Kok build.gradle Dosyasini Yeniden Olustur
         run: |
-          cat > tv_project/build.gradle <<-'EOT'
-            buildscript {
-                repositories {
-                    google()
-                    mavenCentral()
-                }
-                dependencies {
-                    classpath "com.android.tools.build:gradle:8.6.0"
-                    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
-                }
-            }
-            allprojects {
-                repositories {
-                    google()
-                    mavenCentral()
-                    maven { url 'https://jitpack.io' }
-                }
-            }
-EOT
+          cat <<EOF > tv_project/build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath "com.android.tools.build:gradle:8.6.0"
+                  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+                  maven { url 'https://jitpack.io' }
+              }
+          }
+          EOF
 
       - name: 7. gradle.properties Ayarlari
         run: |
