@@ -23,7 +23,7 @@ jobs:
       - name: 3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)
         run: |
           echo "ChannelsFragment.kt dosyasi lifecycleScope importu ile yeniden yaziliyor..."
-            cat <<'EOF' > tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
+          cat <<'EOF' > tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
 package com.egze.tvplus
 
 import android.content.Intent
@@ -40,7 +40,7 @@ import com.egze.tvplus.data.ChannelsRepository
 import com.egze.tvplus.presenter.ChannelPresenter
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.launch
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.lifecycleScope 
 
 class ChannelsFragment : BrowseSupportFragment() {
 
