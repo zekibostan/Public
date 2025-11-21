@@ -20,7 +20,7 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # 🚀 3. ADIM: build.gradle Dosyasini Yeniden Olustur (SDK 35 Uyumlu)
+      # 3. ADIM: build.gradle Dosyasini Yeniden Olustur (SDK 35 Uyumlu)
       - name: 3. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
@@ -76,8 +76,8 @@ jobs:
           }
           EOF
 
-      # 🚀 3.5 ADIM: AndroidManifest.xml DUZELTME (HATA BURADAYDI)
-      - name: 3.5 AndroidManifest.xml Duzelt (exported=true)
+      # 3.5 ADIM: AndroidManifest.xml DUZELTME (exported=true)
+      - name: 3.5 AndroidManifest.xml Duzelt
         run: |
           echo "AndroidManifest.xml dosyasi SDK 35 uyumlu hale getiriliyor..."
           rm tv_project/app/src/main/AndroidManifest.xml
@@ -116,6 +116,20 @@ jobs:
               </application>
           </manifest>
           EOF
+
+      # 🚀 3.6 ADIM: activity_player.xml DUZELTME (HATA BURADAYDI)
+      - name: 3.6 activity_player.xml Duzelt (android -> app)
+        run: |
+          echo "activity_player.xml dosyasindaki hatali namespace duzeltiliyor..."
+          
+          # 1. android:use_controller ibaresini app:use_controller olarak degistirir.
+          sed -i 's/android:use_controller/app:use_controller/g' tv_project/app/src/main/res/layout/activity_player.xml
+          
+          # 2. Dosyada app namespace tanimli degilse, root elemente ekler.
+          # Genelde xmlns:android tanimlidir, hemen yanina xmlns:app ekliyoruz.
+          sed -i 's/xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android"/xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android" xmlns:app="http:\/\/schemas.android.com\/apk\/res-auto"/g' tv_project/app/src/main/res/layout/activity_player.xml
+          
+          echo "Düzeltme tamamlandi."
 
       - name: 4. Kok build.gradle Dosyasini Yeniden Olustur
         run: |
