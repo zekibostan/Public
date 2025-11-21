@@ -20,8 +20,7 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # 🚀 KRITIK KOD DOSYALARINI YENIDEN YAZMA ADIMLARI
-      
+      # 3. ChannelsFragment.kt Dosyasini Duzeltilmis Haliyle Yeniden Olustur
       - name: 3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)
         run: |
           echo "ChannelsFragment.kt dosyasi lifecycleScope importu ile yeniden yaziliyor..."
