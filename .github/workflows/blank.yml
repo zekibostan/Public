@@ -20,7 +20,7 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # 🚀 GÜNCELLEME: SDK 35 ve AGP 8.6.0 Uyumlu build.gradle
+      # 🚀 3. ADIM: build.gradle Dosyasini Yeniden Olustur (SDK 35 Uyumlu)
       - name: 3. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
@@ -35,12 +35,12 @@ jobs:
 
           android {
               namespace 'com.egze.tvplus'
-              compileSdk 35  // HATA DUZELTME: SDK 35 yapildi
+              compileSdk 35
 
               defaultConfig {
                   applicationId "com.egze.tvplus"
                   minSdk 21
-                  targetSdk 35  // HATA DUZELTME: SDK 35 yapildi
+                  targetSdk 35
                   versionCode 1
                   versionName "1.0"
               }
@@ -65,26 +65,58 @@ jobs:
               implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
               implementation 'androidx.core:core-ktx:1.9.0'
               implementation 'androidx.appcompat:appcompat:1.6.1'
-              
-              // Bu kutuphane SDK 35 istiyordu, artik sorun cikarmayacak
               implementation 'androidx.leanback:leanback:1.2.0'
-              
               implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
-              
               implementation 'com.squareup.retrofit2:retrofit:2.9.0'
               implementation 'com.squareup.retrofit2:converter-moshi:2.9.0'
               implementation 'com.squareup.moshi:moshi-kotlin:1.15.0'
-              
               implementation 'com.github.bumptech.glide:glide:4.15.1'
               kapt 'com.github.bumptech.glide:compiler:4.15.1'
-              
               implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
           }
           EOF
-          
-          echo "✅ app/build.gradle SDK 35 ile yenilendi."
 
-      # 🚀 GÜNCELLEME: AGP 8.6.0 sürümü ayarlandi
+      # 🚀 3.5 ADIM: AndroidManifest.xml DUZELTME (HATA BURADAYDI)
+      - name: 3.5 AndroidManifest.xml Duzelt (exported=true)
+        run: |
+          echo "AndroidManifest.xml dosyasi SDK 35 uyumlu hale getiriliyor..."
+          rm tv_project/app/src/main/AndroidManifest.xml
+          
+          cat <<EOF > tv_project/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.egze.tvplus">
+          
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-feature android:name="android.software.leanback" android:required="true" />
+              <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+          
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme">
+                  
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:icon="@mipmap/ic_launcher"
+                      android:label="@string/app_name"
+                      android:logo="@mipmap/ic_launcher"
+                      android:screenOrientation="landscape">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+                  
+                  <activity android:name=".PlayerActivity" />
+                  <activity android:name=".SearchActivity" />
+              </application>
+          </manifest>
+          EOF
+
       - name: 4. Kok build.gradle Dosyasini Yeniden Olustur
         run: |
           cat <<EOF > tv_project/build.gradle
@@ -94,7 +126,6 @@ jobs:
                   mavenCentral()
               }
               dependencies {
-                  // HATA DUZELTME: 8.1.1 -> 8.6.0 yapildi (Leanback istegi uzerine)
                   classpath "com.android.tools.build:gradle:8.6.0"
                   classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
               }
@@ -121,7 +152,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # 🚀 GÜNCELLEME: API Level 35 kuruluyor
       - name: 7. Gerekli Android SDK (35) Kurulumu
         uses: android-actions/setup-android@v3
         with:
@@ -138,7 +168,6 @@ jobs:
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
           
-      # 🚀 GÜNCELLEME: Gradle 8.10.2 (AGP 8.6.0 ile uyumlu olmasi icin)
       - name: 9. Gradle Kurulumu (8.10.2)
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -148,7 +177,6 @@ jobs:
         run: |
           echo "Build baslatiliyor..."
           cd tv_project
-          # --refresh-dependencies: Tum kutuphaneleri sifirdan indirir
           gradle assembleDebug --stacktrace --warning-mode all --refresh-dependencies
           
       - name: 11. Olusan APK'yi Yukle (Artifact)
