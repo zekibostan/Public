@@ -26,8 +26,23 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # 🚀 YENİ ADIM: Android Lisanslarini Manuel ve Garantili Olustur
-      - name: 4. Android Lisanslarini Olustur
+      # 🚀 ADIM 4: Windows formatindaki gradlew dosyasini Linux uyumlu hale getiriyoruz
+      - name: 4. gradlew Dosyasini Tamir Et (dos2unix)
+        run: |
+          # dos2unix aracini yukle
+          sudo apt-get update
+          sudo apt-get install -y dos2unix
+          
+          # Dosya formatini Windows'tan (CRLF) Unix'e (LF) cevir
+          dos2unix tv_project/gradlew
+          
+          # Calistirma izni ver
+          chmod +x tv_project/gradlew
+          
+          echo "gradlew dosyasi onarildi ve hazir."
+
+      # ADIM 5: Lisanslari Manuel Olustur (Bu yontem sorunsuz calisiyordu, koruyoruz)
+      - name: 5. Android Lisanslarini Olustur
         run: |
           mkdir -p $ANDROID_HOME/licenses
           echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
@@ -37,27 +52,31 @@ jobs:
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
 
-      # 🚀 SİSTEM GRADLE KURULUMU: Projedeki gradlew dosyasi bozuksa bunu kullanir
-      - name: 5. Gradle Kurulumu
-        uses: gradle/actions/setup-gradle@v4
+      - name: 6. Gradle Onbellegini Yapilandir
+        uses: actions/cache@v3
         with:
-          gradle-version: '8.5' # Guncel ve kararli bir surum
-          
-      - name: 6. Debug APK'sini Olustur (Direkt Gradle)
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('tv_project/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+            
+      # 🚀 ADIM 7: Artik onarilmis kendi gradlew dosyasini kullaniyoruz
+      - name: 7. Debug APK'sini Olustur
         run: |
-          echo "Sistem Gradle ile build baslatiliyor..."
+          echo "Projenin kendi Gradle surumuyle build baslatiliyor..."
           cd tv_project
-          # ./gradlew YERİNE dogrudan gradle komutunu kullaniyoruz.
-          # Bu, zip icindeki bozuk script sorununu asar.
-          gradle assembleDebug --stacktrace --warning-mode all
+          # Artik ./gradlew komutu hatasiz calismali
+          ./gradlew assembleDebug --stacktrace
           
-      - name: 7. Klasor Kontrolu (Hata Ayiklama)
+      - name: 8. Klasor Kontrolu (Hata Ayiklama)
         if: always()
         run: |
           echo "Build sonrasi klasor yapisi:"
           ls -R tv_project/app/build/outputs/apk/ || echo "APK klasoru bulunamadi"
 
-      - name: 8. Olusan APK'yi Yukle (Artifact)
+      - name: 9. Olusan APK'yi Yukle (Artifact)
         uses: actions/upload-artifact@v4 
         with:
           name: android-tv-apk-debug
