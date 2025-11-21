@@ -16,33 +16,49 @@ jobs:
       
       - name: 2. tv.zip Dosyasini Cikar
         run: |
-          echo "ZIP dosyasi cikariliyor..."
+          echo "ZIP dosyasi tv_project klasorune cikartiliyor..."
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      - name: 3. Java 17 Kurulumu
+      # 🚀 YENİ KONTROL ADIMI: Gerekli dosyalarin varligini teyit et
+      - name: 3. Kritik Dosya Kontrolu ⚠️
+        run: |
+          echo "--- Dosya Kontrolu Basliyor ---"
+          
+          # Gradle Wrapper scriptinin varligini kontrol et
+          if [ -f tv_project/gradlew ]; then
+            echo "✅ tv_project/gradlew dosyasi bulundu."
+          else
+            echo "❌ HATA: tv_project/gradlew dosyasi bulunamadi. ZIP icerigini kontrol edin."
+            exit 1
+          fi
+          
+          # app/build.gradle dosyasinin varligini kontrol et
+          if [ -f tv_project/app/build.gradle ]; then
+            echo "✅ tv_project/app/build.gradle dosyasi bulundu."
+          else
+            echo "❌ HATA: tv_project/app/build.gradle dosyasi bulunamadi. Bu dosya olmadan derleme yapilamaz."
+            exit 1
+          fi
+          
+          echo "--- Kritik Dosyalar Teyit Edildi ---"
+          
+      - name: 4. Java 17 Kurulumu
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 🚀 ADIM 4: Windows formatindaki gradlew dosyasini Linux uyumlu hale getiriyoruz
-      - name: 4. gradlew Dosyasini Tamir Et (dos2unix)
+      - name: 5. gradlew Dosyasini Tamir Et (dos2unix)
         run: |
-          # dos2unix aracini yukle
           sudo apt-get update
           sudo apt-get install -y dos2unix
           
-          # Dosya formatini Windows'tan (CRLF) Unix'e (LF) cevir
+          # Dosya formatini Unix'e cevir ve calistirma izni ver
           dos2unix tv_project/gradlew
-          
-          # Calistirma izni ver
           chmod +x tv_project/gradlew
           
-          echo "gradlew dosyasi onarildi ve hazir."
-
-      # ADIM 5: Lisanslari Manuel Olustur (Bu yontem sorunsuz calisiyordu, koruyoruz)
-      - name: 5. Android Lisanslarini Olustur
+      - name: 6. Android Lisanslarini Olustur
         run: |
           mkdir -p $ANDROID_HOME/licenses
           echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
@@ -52,31 +68,13 @@ jobs:
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
 
-      - name: 6. Gradle Onbellegini Yapilandir
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('tv_project/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-            
-      # 🚀 ADIM 7: Artik onarilmis kendi gradlew dosyasini kullaniyoruz
       - name: 7. Debug APK'sini Olustur
         run: |
-          echo "Projenin kendi Gradle surumuyle build baslatiliyor..."
+          echo "Build baslatiliyor..."
           cd tv_project
-          # Artik ./gradlew komutu hatasiz calismali
           ./gradlew assembleDebug --stacktrace
           
-      - name: 8. Klasor Kontrolu (Hata Ayiklama)
-        if: always()
-        run: |
-          echo "Build sonrasi klasor yapisi:"
-          ls -R tv_project/app/build/outputs/apk/ || echo "APK klasoru bulunamadi"
-
-      - name: 9. Olusan APK'yi Yukle (Artifact)
+      - name: 8. Olusan APK'yi Yukle (Artifact)
         uses: actions/upload-artifact@v4 
         with:
           name: android-tv-apk-debug
