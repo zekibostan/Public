@@ -36,71 +36,70 @@ jobs:
           # searchResultProvider atamasini duzelt
           sed -i 's/super.onCreate(savedInstanceState)/super.onCreate(savedInstanceState)\n        searchResultProvider = this/g' tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
 
-      # Hata veren 44. satırın bulunduğu blok
       - name: 5. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
           rm -f tv_project/app/build.gradle
           cat > tv_project/app/build.gradle <<'EOT'
-          plugins {
-              id 'com.android.application'
-              id 'org.jetbrains.kotlin.android'
-              id 'kotlin-kapt'
-              id 'kotlin-parcelize'
-          }
+            plugins {
+                id 'com.android.application'
+                id 'org.jetbrains.kotlin.android'
+                id 'kotlin-kapt'
+                id 'kotlin-parcelize'
+            }
 
-android {
-    namespace 'com.egze.tvplus'
-    compileSdk 35
+            android {
+                namespace 'com.egze.tvplus'
+                compileSdk 35
 
-    defaultConfig {
-        applicationId "com.egze.tvplus"
-        minSdk 21
-        targetSdk 35
-        versionCode 1
-        versionName "1.0"
-    }
+                defaultConfig {
+                    applicationId "com.egze.tvplus"
+                    minSdk 21
+                    targetSdk 35
+                    versionCode 1
+                    versionName "1.0"
+                }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
+                buildTypes {
+                    release {
+                        minifyEnabled false
+                        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                    }
+                }
 
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-}
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+                kotlinOptions {
+                    jvmTarget = "17"
+                }
+            }
 
-kapt {
-    correctErrorTypes = true
-}
+            kapt {
+                correctErrorTypes = true
+            }
 
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
-    implementation 'androidx.core:core-ktx:1.9.0'
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.leanback:leanback:1.2.0'
-    
-    # Coroutine ve lifecycleScope uzantilari
-    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
-    implementation "androidx.fragment:fragment-ktx:1.6.2"    
-    implementation "androidx.activity:activity-ktx:1.8.2"    
-    
-    implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
-    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
-    implementation 'com.squareup.retrofit2:converter-moshi:2.9.0'
-    implementation 'com.squareup.moshi:moshi-kotlin:1.15.0'
-    implementation 'com.github.bumptech.glide:glide:4.15.1'
-    kapt 'com.github.bumptech.glide:compiler:4.15.1'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
-}
+            dependencies {
+                implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
+                implementation 'androidx.core:core-ktx:1.9.0'
+                implementation 'androidx.appcompat:appcompat:1.6.1'
+                implementation 'androidx.leanback:leanback:1.2.0'
+                
+                # Coroutine ve lifecycleScope uzantilari
+                implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
+                implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
+                implementation "androidx.fragment:fragment-ktx:1.6.2"    
+                implementation "androidx.activity:activity-ktx:1.8.2"    
+                
+                implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
+                implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+                implementation 'com.squareup.retrofit2:converter-moshi:2.9.0'
+                implementation 'com.squareup.moshi:moshi-kotlin:1.15.0'
+                implementation 'com.github.bumptech.glide:glide:4.15.1'
+                kapt 'com.github.bumptech.glide:compiler:4.15.1'
+                implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+            }
 EOT
 
       - name: 5.5 ADIM: AndroidManifest.xml Duzeltme
@@ -108,36 +107,36 @@ EOT
           echo "AndroidManifest.xml dosyasi duzeltiliyor..."
           rm -f tv_project/app/src/main/AndroidManifest.xml
           cat > tv_project/app/src/main/AndroidManifest.xml <<'EOT'
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-feature android:name="android.software.leanback" android:required="true" />
-    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+            <?xml version="1.0" encoding="utf-8"?>
+            <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+                <uses-permission android:name="android.permission.INTERNET" />
+                <uses-feature android:name="android.software.leanback" android:required="true" />
+                <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:supportsRtl="true"
-        android:theme="@style/AppTheme">
-        
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher"
-            android:label="@string/app_name"
-            android:logo="@mipmap/ic_launcher"
-            android:screenOrientation="landscape">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
-        </activity>
-        
-        <activity android:name=".PlayerActivity" />
-        <activity android:name=".SearchActivity" />
-    </application>
-</manifest>
+                <application
+                    android:allowBackup="true"
+                    android:icon="@mipmap/ic_launcher"
+                    android:label="@string/app_name"
+                    android:supportsRtl="true"
+                    android:theme="@style/AppTheme">
+                    
+                    <activity
+                        android:name=".MainActivity"
+                        android:exported="true"
+                        android:icon="@mipmap/ic_launcher"
+                        android:label="@string/app_name"
+                        android:logo="@mipmap/ic_launcher"
+                        android:screenOrientation="landscape">
+                        <intent-filter>
+                            <action android:name="android.intent.action.MAIN" />
+                            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                        </intent-filter>
+                    </activity>
+                    
+                    <activity android:name=".PlayerActivity" />
+                    <activity android:name=".SearchActivity" />
+                </application>
+            </manifest>
 EOT
 
       - name: 5.6 ADIM: activity_player.xml Duzeltme
@@ -149,23 +148,23 @@ EOT
       - name: 6. Kok build.gradle Dosyasini Yeniden Olustur
         run: |
           cat > tv_project/build.gradle <<'EOT'
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath "com.android.tools.build:gradle:8.6.0"
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
-    }
-}
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url 'https://jitpack.io' }
-    }
-}
+            buildscript {
+                repositories {
+                    google()
+                    mavenCentral()
+                }
+                dependencies {
+                    classpath "com.android.tools.build:gradle:8.6.0"
+                    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
+                }
+            }
+            allprojects {
+                repositories {
+                    google()
+                    mavenCentral()
+                    maven { url 'https://jitpack.io' }
+                }
+            }
 EOT
 
       - name: 7. gradle.properties Ayarlari
