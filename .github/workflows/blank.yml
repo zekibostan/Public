@@ -101,7 +101,6 @@ jobs:
                 implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
             }
 EOT
-
       - name: 5.5 ADIM: AndroidManifest.xml Duzeltme
         run: |
           echo "AndroidManifest.xml dosyasi duzeltiliyor..."
