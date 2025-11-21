@@ -20,41 +20,168 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # 🚀 KRITIK KOD DUZELTMELERI BURADA BASLIYOR
+      # 🚀 KRITIK KOD DOSYALARINI YENIDEN YAZMA ADIMLARI
       
-      - name: 3. ChannelsFragment.kt Dosyasina Eksik Import Ekle
+      # 3. ChannelsFragment.kt Dosyasini Duzeltilmis Haliyle Yeniden Olustur
+      - name: 3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)
         run: |
-          # lifecycleScope hatasini cozmek icin import eklendi
-          FILE="tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt"
-          sed -i '/import androidx.leanback.widget.ListRowPresenter/a import androidx.lifecycle.lifecycleScope' $FILE
-          echo "$FILE dosyasina lifecycleScope importu eklendi."
+          echo "ChannelsFragment.kt dosyasi lifecycleScope importu ile yeniden yaziliyor..."
+          cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
+          package com.egze.tvplus
+
+          import android.content.Intent
+          import android.os.Bundle
+          import android.util.Log
+          import androidx.core.content.ContextCompat
+          import androidx.leanback.app.BrowseSupportFragment
+          import androidx.leanback.widget.ArrayObjectAdapter
+          import androidx.leanback.widget.HeaderItem
+          import androidx.leanback.widget.ListRow
+          import androidx.leanback.widget.ListRowPresenter
+          import com.egze.tvplus.api.RetrofitClient
+          import com.egze.tvplus.data.ChannelsRepository
+          import com.egze.tvplus.presenter.ChannelPresenter
+          import kotlinx.coroutines.CoroutineExceptionHandler
+          import kotlinx.coroutines.launch
+          import androidx.lifecycle.lifecycleScope // EK: lifecycleScope hatasini cozmek icin
+
+          class ChannelsFragment : BrowseSupportFragment() {
+
+              private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
+
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  title = "EgzeTv+"
+                  headersState = HEADERS_DISABLED
+                  adapter = rowsAdapter
+
+                  setOnSearchClickedListener {
+                      // Open SearchActivity (Leanback Search)
+                      val intent = Intent(requireContext(), SearchActivity::class.java)
+                      ContextCompat.startActivity(requireContext(), intent, null)
+                  }
+
+                  fetchChannels()
+              }
+
+              private fun fetchChannels() {
+                  val handler = CoroutineExceptionHandler { _, ex ->
+                      Log.e("ChannelsFragment", "API error: ${ex.message}")
+                  }
+                  // lifecycleScope kullanimi ile suspend fonksiyonu cagrildi
+                  lifecycleScope.launch(handler) {
+                      val resp = RetrofitClient.api.getChannels()
+                      val channels = resp.channels.filter { it.platform_android == "1" }
+                      ChannelsRepository.channels = channels
+                      val grouped = channels.groupBy { it.description ?: "Diğer" }
+                      val cardPresenter = ChannelPresenter(requireContext())
+                      rowsAdapter.clear()
+                      for ((category, list) in grouped) {
+                          val header = HeaderItem(category)
+                          val listRowAdapter = ArrayObjectAdapter(cardPresenter)
+                          list.forEach { listRowAdapter.add(it) }
+                          rowsAdapter.add(ListRow(header, listRowAdapter))
+                      }
+                  }
+              }
+
+              override fun onResume() {
+                  super.onResume()
+                  setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->
+                      if (item is com.egze.tvplus.model.Channel) {
+                          val intent = android.content.Intent(requireContext(), PlayerActivity::class.java)
+                          val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }
+                          intent.putExtra("channel_index", index)
+                          startActivity(intent)
+                      }
+                  }
+              }
+          }
+          EOF
       
-      - name: 4. ChannelsSearchFragment.kt Dosyasindaki Hatalari Duzelt
+      # 4. ChannelsSearchFragment.kt Dosyasini Duzeltilmis Haliyle Yeniden Olustur
+      - name: 4. ChannelsSearchFragment.kt'yi Duzelt (KTX importlari ve onItemClicked kaldirildi)
         run: |
-          FILE="tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt"
-          
-          # Leanback KTX uzanti fonksiyonlari icin importlar eklendi (Hata 3 & 4)
-          sed -i '/import androidx.leanback.widget.Presenter/a import androidx.leanback.app.searchResultProvider' $FILE
-          sed -i '/import androidx.leanback.app.searchResultProvider/a import androidx.leanback.app.setSearchAffordanceColor' $FILE
+          echo "ChannelsSearchFragment.kt dosyasi KTX importlari ve onItemClicked duzeltilerek yeniden yaziliyor..."
+          cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
+          package com.egze.tvplus
 
-          # Hata 5: 'onItemClicked' overrides nothing metodunu sil ve mantigi onCreate'e tasi
-          
-          # onItemClicked mantigini bir degiskene kaydet (Intent ve startActivity kismi)
-          CLICK_LOGIC=$(awk '/override fun onItemClicked\(item: Any\?\) \{/,/^\s*\}/' $FILE | tail -n +2 | head -n -1)
-          
-          # Hatalı override fun onItemClicked methodunu sil
-          sed -i '/override fun onItemClicked(item: Any?)/,/}/d' $FILE
-          
-          # Mantigi onCreate icine setOnItemViewClickedListener olarak ekle
-          # NOTE: ChannelsFragment'ta onResume kullanilmasina ragmen, SearchFragment icin onCreate daha uygun olabilir.
-          # Ancak, ChannelsFragment'in kod mantigina uygun olarak listener'i onResume'a tasiyoruz.
-          
-          # Yeni setOnItemViewClickedListener mantigini ChannelsSearchFragment'a ekle
-          sed -i '/override fun onCreate(savedInstanceState: Bundle?) {/a\         setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->\n             if (item is Channel) {\n                 val intent = android.content.Intent(requireContext(), PlayerActivity::class.java)\n                 val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }\n                 intent.putExtra("channel_index", index)\n                 startActivity(intent)\n             }\n         }' $FILE
+          import androidx.leanback.app.SearchSupportFragment
+          import androidx.leanback.widget.ArrayObjectAdapter
+          import androidx.leanback.widget.HeaderItem
+          import androidx.leanback.widget.ListRow
+          import androidx.leanback.widget.ListRowPresenter
+          import androidx.leanback.widget.Presenter
+          import android.content.Intent
+          import android.os.Bundle
+          import android.util.Log
+          import com.egze.tvplus.data.ChannelsRepository
+          import com.egze.tvplus.presenter.ChannelPresenter
+          import com.egze.tvplus.model.Channel
+          import androidx.leanback.app.searchResultProvider // EK: KTX uzantisi
+          import androidx.leanback.app.setSearchAffordanceColor // EK: KTX uzantisi
+          import androidx.leanback.widget.OnItemViewClickedListener // Gerekli olabilecek import
 
-          echo "$FILE dosyasindaki 3, 4 ve 5 numarali hatalar duzeltildi."
+          class ChannelsSearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchResultProvider {
 
-      # 5. app/build.gradle Dosyasini Yeniden Olustur
+              private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
+
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  searchResultProvider = this
+                  // optional hint
+                  setSearchAffordanceColor(0xFF0D47A1.toInt())
+              }
+
+              override fun getResultsAdapter(): ArrayObjectAdapter {
+                  return rowsAdapter
+              }
+
+              override fun onQueryTextChange(newQuery: String?): Boolean {
+                  val q = newQuery?.trim() ?: ""
+                  updateResults(q)
+                  return true
+              }
+
+              override fun onQueryTextSubmit(query: String?): Boolean {
+                  updateResults(query ?: "")
+                  return true
+              }
+
+              private fun updateResults(q: String) {
+                  rowsAdapter.clear()
+                  if (q.isEmpty()) return
+                  try {
+                      val all = ChannelsRepository.channels
+                      val filtered = all.filter { it.title.contains(q, ignoreCase=true) }
+                      val presenter: Presenter = ChannelPresenter(requireContext())
+                      val rowAdapter = ArrayObjectAdapter(presenter)
+                      filtered.forEach { rowAdapter.add(it) }
+                      if (filtered.isNotEmpty()) {
+                          rowsAdapter.add(ListRow(HeaderItem("Arama Sonuçları"), rowAdapter))
+                      }
+                  } catch (ex: Exception) {
+                      Log.e("ChannelsSearch", "Search error: \${ex.message}")
+                  }
+              }
+
+              // HATA VEREN 'onItemClicked' metodu kaldırıldı. Yerine doğru listener onResume'a eklendi.
+              
+              override fun onResume() {
+                  super.onResume()
+                  setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->
+                      if (item is Channel) {
+                          val intent = Intent(requireContext(), PlayerActivity::class.java)
+                          val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }
+                          intent.putExtra("channel_index", index)
+                          startActivity(intent)
+                      }
+                  }
+              }
+          }
+          EOF
+
+      # 5. app/build.gradle Dosyasini Yeniden Olustur (Ayrica dogru)
       - name: 5. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
