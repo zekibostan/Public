@@ -42,12 +42,12 @@ jobs:
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
           rm -f tv_project/app/build.gradle
           cat > tv_project/app/build.gradle <<'EOT'
-plugins {
-    id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
-    id 'kotlin-kapt'
-    id 'kotlin-parcelize'
-}
+          plugins {
+              id 'com.android.application'
+              id 'org.jetbrains.kotlin.android'
+              id 'kotlin-kapt'
+              id 'kotlin-parcelize'
+          }
 
 android {
     namespace 'com.egze.tvplus'
