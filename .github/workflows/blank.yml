@@ -24,29 +24,29 @@ jobs:
           unzip -o tv.zip -d project
           echo "Zip extracted to project/"
 
-      - name: Install standalone Gradle to generate wrapper
+      - name: Install Gradle 8.4 to generate wrapper (SAFE FOR ANDROID)
         run: |
           wget https://services.gradle.org/distributions/gradle-8.4-bin.zip -O gradle.zip
           unzip gradle.zip -d /opt/gradle
           export PATH="/opt/gradle/gradle-8.4/bin:$PATH"
           gradle -v
 
-      - name: Create Gradle wrapper (if missing)
+      - name: Create Gradle wrapper (Android-compatible)
         run: |
           cd project
           if [ ! -f "gradlew" ]; then
-            echo "gradlew not found — generating wrapper using Gradle"
             gradle wrapper --gradle-version 8.4
+            echo "Android-compatible Gradle wrapper created (8.4)"
           else
             echo "gradlew already exists"
           fi
 
-      - name: Add execute permissions
+      - name: Make wrapper executable
         run: |
           cd project
           chmod +x gradlew
 
-      - name: Setup JDK 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
