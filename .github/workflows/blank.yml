@@ -20,27 +20,28 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      - name: 3. ChannelsFragment.kt'ye lifecycleScope importunu Ekle
+      - name: 3. ChannelsFragment.kt'yi Duzelt (sed ile import eklendi)
         run: |
           echo "ChannelsFragment.kt dosyasina lifecycleScope importu ekleniyor..."
           # ChannelsFragment.kt dosyasina yeni import satiri eklenir
           sed -i '/import androidx.leanback.widget.ListRowPresenter/a\import androidx.lifecycle.lifecycleScope' tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
-          # Dosya icinde 'lifecycleScope.launch(handler)' ile ilgili degisiklikler yapilir
-          sed -i 's/val handler = CoroutineExceptionHandler { _, ex ->/val handler = CoroutineExceptionHandler { _, ex ->\n            Log.e("ChannelsFragment", "API error: ${ex.message}")\n        }\n        // lifecycleScope kullanimi ile suspend fonksiyonu cagrildi\n        lifecycleScope.launch(handler)/g' tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
-          sed -i '/fetchChannels()/{N;s/fetchChannels()\n    }\n\n    private fun fetchChannels() {/fetchChannels()\n    }\n\n    private fun fetchChannels() {\n        val handler = CoroutineExceptionHandler { _, ex ->\n            Log.e("ChannelsFragment", "API error: ${ex.message}")\n        }\n        lifecycleScope.launch(handler)/g' tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
+          # fetchChannels fonksiyonu duzeltilir
+          sed -i 's/fetchChannels()/{N;s/fetchChannels()\n    }\n\n    private fun fetchChannels() {/fetchChannels()\n    }\n\n    private fun fetchChannels() {\n        val handler = CoroutineExceptionHandler { _, ex ->\n            Log.e("ChannelsFragment", "API error: ${ex.message}")\n        }\n        lifecycleScope.launch(handler)/g' tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
           
-      - name: 4. ChannelsSearchFragment.kt'yi Duzelt (KTX importlari ve onItemClicked)
+      - name: 4. ChannelsSearchFragment.kt'yi Duzelt (sed ile KTX importlari ve onItemClicked)
         run: |
           echo "ChannelsSearchFragment.kt dosyasindaki importlar ve tiklama islemi duzeltiliyor..."
-          # KTX uzantilarini import et (Leanback 1.2.0 icin gerekli)
+          # KTX uzantilarini import et
           sed -i 's/import androidx.leanback.app.SearchFragment/import androidx.leanback.app.SearchSupportFragment\nimport androidx.leanback.app.searchResultProvider\nimport androidx.leanback.app.setSearchAffordanceColor\nimport androidx.leanback.widget.OnItemViewClickedListener/g' tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
-          
+          # searchResultProvider atamasini duzelt
+          sed -i 's/super.onCreate(savedInstanceState)/super.onCreate(savedInstanceState)\n        searchResultProvider = this/g' tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
+
+      # Hata veren 44. satırın bulunduğu blok
       - name: 5. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
           rm -f tv_project/app/build.gradle
-          # app/build.gradle dosyasını yeniden oluşturmak için tek satırlık echo/cat kullan
-          cat > tv_project/app/build.gradle <<EOT
+          cat > tv_project/app/build.gradle <<'EOT'
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -86,7 +87,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.leanback:leanback:1.2.0'
     
-    // Coroutine ve lifecycleScope uzantilari
+    # Coroutine ve lifecycleScope uzantilari
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
     implementation "androidx.fragment:fragment-ktx:1.6.2"    
@@ -106,7 +107,6 @@ EOT
         run: |
           echo "AndroidManifest.xml dosyasi duzeltiliyor..."
           rm -f tv_project/app/src/main/AndroidManifest.xml
-          # AndroidManifest.xml dosyasını yeniden oluşturmak için tek satırlık echo/cat kullan
           cat > tv_project/app/src/main/AndroidManifest.xml <<'EOT'
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -143,14 +143,11 @@ EOT
       - name: 5.6 ADIM: activity_player.xml Duzeltme
         run: |
           echo "activity_player.xml dosyasindaki hatali namespace duzeltiliyor..."
-          # use_controller yerine app:use_controller kullanimi icin duzeltme
           sed -i 's/android:use_controller/app:use_controller/g' tv_project/app/src/main/res/layout/activity_player.xml
-          # app namespace eklenir
           sed -i 's/xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android"/xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android" xmlns:app="http:\/\/schemas.android.com\/apk\/res-auto"/g' tv_project/app/src/main/res/layout/activity_player.xml
 
       - name: 6. Kok build.gradle Dosyasini Yeniden Olustur
         run: |
-          # build.gradle dosyasını yeniden oluşturmak için tek satırlık echo/cat kullan
           cat > tv_project/build.gradle <<'EOT'
 buildscript {
     repositories {
