@@ -20,16 +20,16 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # 🚀 KRİTİK ÇÖZÜM ADIMI: AndroidX destegini etkinlestiriyoruz
+      # KRİTİK ÇÖZÜM ADIMI: AndroidX destegini etkinlestiriyoruz
       - name: 3. AndroidX Destegini Etkinlestir
         run: |
-          # gradle.properties dosyasi yoksa olusturur, varsa dokunmaz.
+          # gradle.properties dosyasini olusturuyoruz/guncelliyoruz.
           touch tv_project/gradle.properties
           
-          # Log'daki hatayi cozen satir: AndroidX'i etkinlestir.
+          # Hata logunda istenen ayar: AndroidX'i etkinlestir.
           echo "android.useAndroidX=true" >> tv_project/gradle.properties
           
-          # Eski bagimliliklar icin uyumluluk katmani olan Jetifier'i de etkinlestiriyoruz.
+          # Uyumlu olmasi icin Jetifier'i de etkinlestiriyoruz.
           echo "android.enableJetifier=true" >> tv_project/gradle.properties
           echo "Gerekli AndroidX ve Jetifier ozellikleri tv_project/gradle.properties dosyasina eklendi."
           
@@ -60,12 +60,12 @@ jobs:
         with:
           gradle-version: '8.1.1' 
           
-      - name: 8. Debug APK'sini Olustur (Direkt Gradle Komutu)
+      - name: 8. Debug APK'sini Olustur (Bağımlılık Yenileme)
         run: |
           echo "Final build denemesi baslatiliyor..."
           cd tv_project
-          # gradlew eksik oldugu icin 'gradle' komutunu kullaniyoruz.
-          gradle assembleDebug --stacktrace --warning-mode all
+          # Bagimlilik hatasini asmak icin tum bagimliliklari yeniden indirmeye zorluyoruz.
+          gradle assembleDebug --stacktrace --warning-mode all --refresh-dependencies
           
       - name: 9. Olusan APK'yi Yukle (Artifact)
         uses: actions/upload-artifact@v4 
