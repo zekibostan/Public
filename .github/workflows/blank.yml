@@ -11,32 +11,37 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: 1. Depoyu Cek (Checkout Repository)
+      - name: 1. Depoyu Cek
         uses: actions/checkout@v4
       
       - name: 2. tv.zip Dosyasini Cikar
         run: |
-          echo "tv.zip dosyasini tv_project klasorune cikariyor..."
+          echo "ZIP dosyasi cikariliyor..."
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      - name: 3. gradlew'ye Calistirma Izni Ver (chmod +x)
-        run: chmod +x tv_project/gradlew
-          
-      - name: 4. Java 17 Kurulumu
+      - name: 3. Java 17 Kurulumu
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-      
-      # 🚀 KRİTİK ADIM: Android SDK Lisanslarini Kabul Etme
-      - name: 5. Android SDK Lisanslarini Kabul Et
+
+      # 🚀 KESİN ÇÖZÜM: sdkmanager komutu yerine lisans dosyalarini manuel olusturuyoruz.
+      - name: 4. Android Lisanslarini Manuel Olustur
         run: |
-          # Bu komut, gerekli tum Android SDK lisanslarini otomatik kabul eder.
-          yes | sdkmanager --licenses || true 
+          mkdir -p $ANDROID_HOME/licenses
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_HOME/licenses/android-sdk-license
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> $ANDROID_HOME/licenses/android-sdk-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license
+          echo "601085b94cd77f0b54ff86406957099ebe79c4d6" > $ANDROID_HOME/licenses/android-googletv-license
         env:
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-          
+          # GitHub Actions'ta varsayilan Android SDK yolu
+          ANDROID_HOME: /usr/local/lib/android/sdk
+
+      - name: 5. gradlew İzinlerini Ayarla
+        run: chmod +x tv_project/gradlew
+
       - name: 6. Gradle Onbellegini Yapilandir
         uses: actions/cache@v3
         with:
@@ -47,12 +52,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
             
-      # 🛠️ GÜNCELLEME: Debug APK'sini Olustur (cd komutu kaldirildi, direk yol kullaniliyor)
-      - name: 7. Debug (Hata Ayiklama) APK'sini Olustur
+      - name: 7. Debug APK'sini Olustur
         run: |
-          echo "Gradle çalıştırılıyor..."
-          # cd komutu olmadan, gradlew dosyasina dogrudan erisim saglaniyor
-          ./tv_project/gradlew assembleDebug --stacktrace
+          echo "Build baslatiliyor..."
+          cd tv_project
+          # ./gradlew yerine bash gradlew kullanarak daha guvenli calistiriyoruz
+          bash gradlew assembleDebug --stacktrace
           
       - name: 8. Olusan APK'yi Yukle (Artifact)
         uses: actions/upload-artifact@v4 
