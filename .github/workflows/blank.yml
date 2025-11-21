@@ -62,7 +62,7 @@ class ChannelsFragment : BrowseSupportFragment() {
 
     private fun fetchChannels() {
         val handler = CoroutineExceptionHandler { _, ex ->
-            Log.e("ChannelsFragment", "API error: ${ex.message}")
+            Log.e("ChannelsFragment", "API error: \$\{ex.message\}")
         }
         lifecycleScope.launch(handler) {
             val resp = RetrofitClient.api.getChannels()
