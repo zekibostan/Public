@@ -20,8 +20,7 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # 🚀 KRİTİK ADIM: app/build.gradle dosyasini TAMAMEN SIFIRDAN YAZIYORUZ
-      # Bu sayede hatali surumler, eksik depolar veya bozuk yapilar tamamen duzeliyor.
+      # 🚀 GÜNCELLEME: SDK 35 ve AGP 8.6.0 Uyumlu build.gradle
       - name: 3. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
@@ -36,12 +35,12 @@ jobs:
 
           android {
               namespace 'com.egze.tvplus'
-              compileSdk 34
+              compileSdk 35  // HATA DUZELTME: SDK 35 yapildi
 
               defaultConfig {
                   applicationId "com.egze.tvplus"
                   minSdk 21
-                  targetSdk 34
+                  targetSdk 35  // HATA DUZELTME: SDK 35 yapildi
                   versionCode 1
                   versionName "1.0"
               }
@@ -64,12 +63,12 @@ jobs:
 
           dependencies {
               implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
-              // HATA DUZELTME: core-ktx surumu 1.11.0 yerine 1.9.0 yapildi (uyumluluk icin)
               implementation 'androidx.core:core-ktx:1.9.0'
               implementation 'androidx.appcompat:appcompat:1.6.1'
+              
+              // Bu kutuphane SDK 35 istiyordu, artik sorun cikarmayacak
               implementation 'androidx.leanback:leanback:1.2.0'
               
-              // HATA DUZELTME: exoplayer surumu 2.19.1 yapildi (2.20.0 yoktur)
               implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
               
               implementation 'com.squareup.retrofit2:retrofit:2.9.0'
@@ -83,9 +82,9 @@ jobs:
           }
           EOF
           
-          echo "✅ app/build.gradle basariyla yenilendi."
+          echo "✅ app/build.gradle SDK 35 ile yenilendi."
 
-      # Root build.gradle dosyasini da Jitpack destegi ile yeniliyoruz
+      # 🚀 GÜNCELLEME: AGP 8.6.0 sürümü ayarlandi
       - name: 4. Kok build.gradle Dosyasini Yeniden Olustur
         run: |
           cat <<EOF > tv_project/build.gradle
@@ -95,7 +94,8 @@ jobs:
                   mavenCentral()
               }
               dependencies {
-                  classpath "com.android.tools.build:gradle:8.1.1"
+                  // HATA DUZELTME: 8.1.1 -> 8.6.0 yapildi (Leanback istegi uzerine)
+                  classpath "com.android.tools.build:gradle:8.6.0"
                   classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
               }
           }
@@ -113,8 +113,7 @@ jobs:
           touch tv_project/gradle.properties
           echo "android.useAndroidX=true" >> tv_project/gradle.properties
           echo "android.enableJetifier=true" >> tv_project/gradle.properties
-          # Bellek hatasi almamak icin JVM bellegini artiriyoruz
-          echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> tv_project/gradle.properties
+          echo "org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8" >> tv_project/gradle.properties
 
       - name: 6. Java 17 Kurulumu
         uses: actions/setup-java@v4
@@ -122,11 +121,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 7. Gerekli Android SDK (34) Kurulumu
+      # 🚀 GÜNCELLEME: API Level 35 kuruluyor
+      - name: 7. Gerekli Android SDK (35) Kurulumu
         uses: android-actions/setup-android@v3
         with:
-          api-level: 34
-          build-tools: '34.0.0'
+          api-level: 35
+          build-tools: '35.0.0'
 
       - name: 8. Android Lisanslarini Olustur
         run: |
@@ -138,10 +138,11 @@ jobs:
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
           
-      - name: 9. Gradle Kurulumu (8.1.1)
+      # 🚀 GÜNCELLEME: Gradle 8.10.2 (AGP 8.6.0 ile uyumlu olmasi icin)
+      - name: 9. Gradle Kurulumu (8.10.2)
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.1.1' 
+          gradle-version: '8.10.2' 
           
       - name: 10. Debug APK'sini Olustur
         run: |
