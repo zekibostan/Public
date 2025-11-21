@@ -100,7 +100,7 @@ jobs:
                 kapt 'com.github.bumptech.glide:compiler:4.15.1'
                 implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
             }
-EOT
+          EOT
 
       - name: 5.5 ADIM: AndroidManifest.xml Duzeltme
         run: |
