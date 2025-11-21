@@ -23,7 +23,7 @@ jobs:
       #########################################################################
       # 3. ChannelsFragment.kt – HATASIZ, DERLENEBİLİR
       #########################################################################
-      - name: 3. ChannelsFragment.kt'yi Yeniden Yaz
+      - name: 3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)
         run: |
           echo "ChannelsFragment.kt yeniden oluşturuluyor..."
           cat <<'EOF' > tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt
