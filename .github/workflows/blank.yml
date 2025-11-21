@@ -99,85 +99,84 @@ jobs:
           }
           EOF
       
-      # 4. ChannelsSearchFragment.kt Dosyasını Düzelten Adım (Workflow içinde)
-      
-      - name: 4. ChannelsSearchFragment.kt'yi Duzelt (KTX importlari ve onItemClicked kaldirildi)
-        run: |
-          echo "ChannelsSearchFragment.kt dosyasi duzeltiliyor..."
-            cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
-            package com.egze.tvplus
+      # 4. ChannelsSearchFragment.kt Dosyasını Düzelten Adım (Gelişmiş Düzeltme)
+      - name: 4. ChannelsSearchFragment.kt'yi Duzelt (Girinti ve Yapısal Hata Giderildi)
+        run: |
+          echo "ChannelsSearchFragment.kt dosyasi duzeltiliyor..."
+          # Girintiyi temizlemek için 'cat' komutunu '<<-EOF' ile kullanarak (tab'ları temizler) veya aşağıdaki gibi sadece kodu yazarak kullanın
+          cat <<EOF > tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt
+package com.egze.tvplus
 
-            import androidx.leanback.app.SearchSupportFragment
-            import androidx.leanback.widget.ArrayObjectAdapter
-            import androidx.leanback.widget.HeaderItem
-            import androidx.leanback.widget.ListRow
-            import androidx.leanback.widget.ListRowPresenter
-            import androidx.leanback.widget.Presenter
-            import android.content.Intent
-            import android.os.Bundle
-            import android.util.Log
-            import com.egze.tvplus.data.ChannelsRepository
-            import com.egze.tvplus.presenter.ChannelPresenter
-            import com.egze.tvplus.model.Channel
-            import androidx.leanback.widget.OnItemViewClickedListener
+import androidx.leanback.app.SearchSupportFragment
+import androidx.leanback.widget.ArrayObjectAdapter
+import androidx.leanback.widget.HeaderItem
+import androidx.leanback.widget.ListRow
+import androidx.leanback.widget.ListRowPresenter
+import androidx.leanback.widget.Presenter
+import android.content.Intent
+import android.os.Bundle
+import android.util.Log
+import com.egze.tvplus.data.ChannelsRepository
+import com.egze.tvplus.presenter.ChannelPresenter
+import com.egze.tvplus.model.Channel
+import androidx.leanback.widget.OnItemViewClickedListener
 
-            class ChannelsSearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchResultProvider {
+class ChannelsSearchFragment : SearchSupportFragment(), SearchSupportFragment.SearchResultProvider {
 
-                private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
+    private val rowsAdapter = ArrayObjectAdapter(ListRowPresenter())
 
-                override fun onCreate(savedInstanceState: Bundle?) {
-                    super.onCreate(savedInstanceState)
-                    // Aşağıdaki hatalı satırlar kaldırıldı:
-                    // searchResultProvider = this
-                    // setSearchAffordanceColor(0xFF0D47A1.toInt())
-                }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Aşağıdaki hatalı satırlar kaldırıldı:
+        // searchResultProvider = this
+        // setSearchAffordanceColor(0xFF0D47A1.toInt())
+    }
 
-                override fun getResultsAdapter(): ArrayObjectAdapter {
-                    return rowsAdapter
-                }
+    override fun getResultsAdapter(): ArrayObjectAdapter {
+        return rowsAdapter
+    }
 
-                override fun onQueryTextChange(newQuery: String?): Boolean {
-                    val q = newQuery?.trim() ?: ""
-                    updateResults(q)
-                    return true
-                }
+    override fun onQueryTextChange(newQuery: String?): Boolean {
+        val q = newQuery?.trim() ?: ""
+        updateResults(q)
+        return true
+    }
 
-                override fun onQueryTextSubmit(query: String?): Boolean {
-                    updateResults(query ?: "")
-                    return true
-                }
+    override fun onQueryTextSubmit(query: String?): Boolean {
+        updateResults(query ?: "")
+        return true
+    }
 
-                private fun updateResults(q: String) {
-                    rowsAdapter.clear()
-                    if (q.isEmpty()) return
-                    try {
-                        val all = ChannelsRepository.channels
-                        val filtered = all.filter { it.title.contains(q, ignoreCase=true) }
-                        val presenter: Presenter = ChannelPresenter(requireContext())
-                        val rowAdapter = ArrayObjectAdapter(presenter)
-                        filtered.forEach { rowAdapter.add(it) }
-                        if (filtered.isNotEmpty()) {
-                            rowsAdapter.add(ListRow(HeaderItem("Arama Sonuçları"), rowAdapter))
-                        }
-                    } catch (ex: Exception) {
-                        Log.e("ChannelsSearch", "Search error: \${ex.message}")
-                    }
-                }
-
-                override fun onResume() {
-                    super.onResume()
-                    setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->
-                        if (item is Channel) {
-                            val intent = Intent(requireContext(), PlayerActivity::class.java)
-                            val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }
-                            intent.putExtra("channel_index", index)
-                            startActivity(intent)
-                        }
-                    }
-                }
+    private fun updateResults(q: String) {
+        rowsAdapter.clear()
+        if (q.isEmpty()) return
+        try {
+            val all = ChannelsRepository.channels
+            val filtered = all.filter { it.title.contains(q, ignoreCase=true) }
+            val presenter: Presenter = ChannelPresenter(requireContext())
+            val rowAdapter = ArrayObjectAdapter(presenter)
+            filtered.forEach { rowAdapter.add(it) }
+            if (filtered.isNotEmpty()) {
+                rowsAdapter.add(ListRow(HeaderItem("Arama Sonuçları"), rowAdapter))
             }
-            EOF
+        } catch (ex: Exception) {
+            Log.e("ChannelsSearch", "Search error: \${ex.message}")
+        }
+    }
 
+    override fun onResume() {
+        super.onResume()
+        setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->
+            if (item is Channel) {
+                val intent = Intent(requireContext(), PlayerActivity::class.java)
+                val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }
+                intent.putExtra("channel_index", index)
+                startActivity(intent)
+            }
+        }
+    }
+}
+EOF
 
       # 5. app/build.gradle Dosyasini Yeniden Olustur (Ayrica dogru)
       - name: 5. app/build.gradle Dosyasini Yeniden Olustur
