@@ -1,86 +1,65 @@
-name: Generated APK AAB (Upload - Create Artifact To Github Action)
+name: Android TV APK Olusturma
 
-env:
-  # The name of the main module repository
-  main_project_module: app
-
-  # The name of the Play Store
-  playstore_name: Frogobox ID
-
+# Bu workflow'u main branch'e bir 'push' yapildiginda 
+# veya GitHub arayuzunden manuel olarak calistirabilirsiniz.
 on:
-
   push:
     branches:
-      - 'release/**'
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+      - main
+  workflow_dispatch: 
 
 jobs:
-  build:
-
+  build_apk:
+    # Build islemini Ubuntu isletim sistemi uzerinde calistir.
     runs-on: ubuntu-latest
-
+    
     steps:
-      - uses: actions/checkout@v4
-
-      # Set Current Date As Env Variable
-      - name: Set current date as env variable
-        run: echo "date_today=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-
-      # Set Repository Name As Env Variable
-      - name: Set repository name as env variable
-        run: echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
-
-      - name: Set Up JDK
+      - name: 1. Depoyu Cek (Checkout Repository)
+        uses: actions/checkout@v4
+      
+      # ZIP dosyasini 'tv_project' adli bir klasore cikarir.
+      - name: 2. tv.zip Dosyasini Cikar
+        run: |
+          echo "public/tv.zip dosyasini tv_project klasorune cikariyor..."
+          mkdir -p tv_project
+          # Varsayilan olarak 'unzip' komutunun var oldugunu varsayar.
+          # -d tv_project: cikarma isleminin yapilacagi dizin
+          unzip public/tv.zip -d tv_project
+          ls -R tv_project # Cikarilan dosyalari listele (Hata ayiklama icin faydali)
+          
+      # Android icin gerekli olan Java Development Kit'i (JDK) kurar.
+      - name: 3. Java 17 Kurulumu
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu' # See 'Supported distributions' for available options
+          distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
-
-      - name: Change wrapper permissions
-        run: chmod +x ./gradlew
-
-      # Run Tests Build
-      - name: Run gradle tests
-        run: ./gradlew test
-
-      # Run Build Project
-      - name: Build gradle project
-        run: ./gradlew build
-
-      # Create APK Debug
-      - name: Build apk debug project (APK) - ${{ env.main_project_module }} module
-        run: ./gradlew assembleDebug
-
-      # Create APK Release
-      - name: Build apk release project (APK) - ${{ env.main_project_module }} module
-        run: ./gradlew assemble
-
-      # Create Bundle AAB Release
-      # Noted for main module build [main_project_module]:bundleRelease
-      - name: Build app bundle release (AAB) - ${{ env.main_project_module }} module
-        run: ./gradlew ${{ env.main_project_module }}:bundleRelease
-
-      # Upload Artifact Build
-      # Noted For Output [main_project_module]/build/outputs/apk/debug/
-      - name: Upload APK Debug - ${{ env.repository_name }}
-        uses: actions/upload-artifact@v4
+          
+      # Gradle onbellekleme (caching) islemi, ard arda yapilan build'leri hizlandirir.
+      - name: 4. Gradle Onbellegini Yapilandir
+        uses: actions/cache@v3
         with:
-          name: ${{ env.date_today }} - ${{ env.playstore_name }} - ${{ env.repository_name }} - APK(s) debug generated
-          path: ${{ env.main_project_module }}/build/outputs/apk/debug/
-
-      # Noted For Output [main_project_module]/build/outputs/apk/release/
-      - name: Upload APK Release - ${{ env.repository_name }}
-        uses: actions/upload-artifact@v4
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          # 'gradle-wrapper.properties' dosyasinin hash'ini kullanarak bir anahtar olusturur.
+          key: ${{ runner.os }}-gradle-${{ hashFiles('tv_project/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+            
+      # APK'yi olusturma (Build) islemini baslatir.
+      - name: 5. Surum (Release) APK'sini Olustur
+        run: |
+          # Cikarilan proje klasorune giris yapilir.
+          cd tv_project
+          # Gradle Wrapper kullanarak Release (yayin) modunda APK olustur.
+          # Not: Eger projeniz imzalama (signing) anahtari gerektiriyorsa, 
+          # bu adimda hata alabilirsiniz ve YML dosyasina imzalama adimlari eklenmelidir.
+          ./gradlew assembleRelease
+          
+      # Olusan APK dosyasini indirmeniz icin GitHub'a yukler.
+      - name: 6. Olusan APK'yi Yukle (Artifact)
+        uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.date_today }} - ${{ env.playstore_name }} - ${{ env.repository_name }} - APK(s) release generated
-          path: ${{ env.main_project_module }}/build/outputs/apk/release/
-
-      # Noted For Output [main_project_module]/build/outputs/bundle/release/
-      - name: Upload AAB (App Bundle) Release - ${{ env.repository_name }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.date_today }} - ${{ env.playstore_name }} - ${{ env.repository_name }} - App bundle(s) AAB release generated
-          path: ${{ env.main_project_module }}/build/outputs/bundle/release/
+          name: android-tv-apk
+          # Yaygin bir Android projesi yolu: tv_project/app/build/outputs/apk/release/
+          path: tv_project/app/build/outputs/apk/release/*.apk
