@@ -20,7 +20,7 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # 🚀 3. ADIM: app/build.gradle (Tüm Gerekli KTX Eklentileri Eklendi)
+      # 🚀 3. ADIM: app/build.gradle (Tüm Hatalar ve Yorumlar Düzeltildi)
       - name: 3. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
@@ -72,11 +72,11 @@ jobs:
               implementation 'androidx.appcompat:appcompat:1.6.1'
               implementation 'androidx.leanback:leanback:1.2.0'
               
-              # 🚀 KRITIK DUZELTME: lifecycleScope ve Fragment/Activity uzantilari
+              // KRITIK DUZELTME: lifecycleScope ve Fragment/Activity uzantilari
               implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
               implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
-              implementation "androidx.fragment:fragment-ktx:1.6.2"    # YENI: Fragment'lara lifecycleScope uzantisi ekler
-              implementation "androidx.activity:activity-ktx:1.8.2"    # YENI: Activity uzantilarini ekler
+              implementation "androidx.fragment:fragment-ktx:1.6.2"    // Fragment'lara lifecycleScope uzantisi ekler
+              implementation "androidx.activity:activity-ktx:1.8.2"    // Activity uzantilarini ekler
               
               implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
               implementation 'com.squareup.retrofit2:retrofit:2.9.0'
