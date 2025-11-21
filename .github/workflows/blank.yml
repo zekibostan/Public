@@ -25,15 +25,19 @@ jobs:
           unzip tv.zip -d tv_project
           ls -R tv_project # Cikarilan dosyalari listele (Hata ayiklama icin faydali)
           
+      # 🛠️ HATA DÜZELTMESİ: gradlew dosyasına çalıştırma izni verilir.
+      - name: 3. gradlew'ye Calistirma Izni Ver (chmod +x)
+        run: chmod +x tv_project/gradlew
+          
       # Android icin gerekli olan Java Development Kit'i (JDK) kurar.
-      - name: 3. Java 17 Kurulumu
+      - name: 4. Java 17 Kurulumu
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
           
       # Gradle onbellekleme (caching) islemi, ard arda yapilan build'leri hizlandirir.
-      - name: 4. Gradle Onbellegini Yapilandir
+      - name: 5. Gradle Onbellegini Yapilandir
         uses: actions/cache@v3
         with:
           path: |
@@ -44,14 +48,13 @@ jobs:
             ${{ runner.os }}-gradle-
             
       # APK'yi olusturma (Build) islemini baslatir.
-      - name: 5. Surum (Release) APK'sini Olustur
+      - name: 6. Surum (Release) APK'sini Olustur
         run: |
-          # Projenizin kök dizinine girdiğinizden emin olun (burada tv_project varsayılıyor)
+          # Projenizin kök dizinine girdiğinizden emin olun (tv_project)
           cd tv_project
           ./gradlew assembleRelease
           
-      # 🚀 GÜNCELLEME: actions/upload-artifact eylemi v4'e yükseltildi
-      - name: 6. Olusan APK'yi Yukle (Artifact)
+      - name: 7. Olusan APK'yi Yukle (Artifact)
         uses: actions/upload-artifact@v4 
         with:
           name: android-tv-apk
