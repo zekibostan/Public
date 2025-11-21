@@ -169,8 +169,8 @@ jobs:
                     }
                 }
               }
-            }
-EOF
+          }
+          EOF
 
       # 5. app/build.gradle Dosyasini Yeniden Olustur (Ayrica dogru)
       - name: 5. app/build.gradle Dosyasini Yeniden Olustur
