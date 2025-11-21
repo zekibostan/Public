@@ -22,8 +22,6 @@ jobs:
         run: |
           echo "public/tv.zip dosyasini tv_project klasorune cikariyor..."
           mkdir -p tv_project
-          # Varsayilan olarak 'unzip' komutunun var oldugunu varsayar.
-          # -d tv_project: cikarma isleminin yapilacagi dizin
           unzip public/tv.zip -d tv_project
           ls -R tv_project # Cikarilan dosyalari listele (Hata ayiklama icin faydali)
           
@@ -41,7 +39,6 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          # 'gradle-wrapper.properties' dosyasinin hash'ini kullanarak bir anahtar olusturur.
           key: ${{ runner.os }}-gradle-${{ hashFiles('tv_project/**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
@@ -49,17 +46,13 @@ jobs:
       # APK'yi olusturma (Build) islemini baslatir.
       - name: 5. Surum (Release) APK'sini Olustur
         run: |
-          # Cikarilan proje klasorune giris yapilir.
+          # Projenizin kök dizinine girdiğinizden emin olun (burada tv_project varsayılıyor)
           cd tv_project
-          # Gradle Wrapper kullanarak Release (yayin) modunda APK olustur.
-          # Not: Eger projeniz imzalama (signing) anahtari gerektiriyorsa, 
-          # bu adimda hata alabilirsiniz ve YML dosyasina imzalama adimlari eklenmelidir.
           ./gradlew assembleRelease
           
-      # Olusan APK dosyasini indirmeniz icin GitHub'a yukler.
+      # 🚀 GÜNCELLEME: actions/upload-artifact eylemi v4'e yükseltildi
       - name: 6. Olusan APK'yi Yukle (Artifact)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4 
         with:
           name: android-tv-apk
-          # Yaygin bir Android projesi yolu: tv_project/app/build/outputs/apk/release/
           path: tv_project/app/build/outputs/apk/release/*.apk
