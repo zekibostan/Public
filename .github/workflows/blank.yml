@@ -19,56 +19,40 @@ jobs:
           echo "tv.zip dosyasini tv_project klasorune cikariyor..."
           mkdir -p tv_project
           unzip tv.zip -d tv_project
-          # Ekstra kontrol icin cikarilan dosyalari listeler
-          echo "--- tv_project icerigi ---"
-          ls -F tv_project/ 
           
-      # 🚀 GÜNCELLEME: Proje kökünü otomatik bulma ve değişkenlere atama
-      - name: 3. Proje Kök Dizini ve gradlew'yi Bul
-        id: find_root
-        run: |
-          # tv_project klasörü içinde gradlew dosyasını arar.
-          # Bulunan ilk gradlew dosyasının dizinini PROJECT_ROOT değişkenine kaydeder.
-          PROJECT_ROOT=$(find tv_project -maxdepth 2 -name "gradlew" -exec dirname {} \;)
+      - name: 3. gradlew'ye Calistirma Izni Ver (chmod +x)
+        # gradlew dosyasina calistirma izni verir (tv_project altinda oldugu dogrulandi)
+        run: chmod +x tv_project/gradlew
           
-          if [ -z "$PROJECT_ROOT" ]; then
-            echo "::error::Hata: 'tv_project' icinde 'gradlew' dosyasi bulunamadi. Projeniz Android yapisinda degil mi?"
-            exit 1
-          fi
-
-          # PROJECT_ROOT degiskenini sonraki adimlar icin disariya aktarir
-          echo "PROJECT_ROOT=$PROJECT_ROOT" >> $GITHUB_OUTPUT
-          echo "Proje Kök Dizini Tespit Edildi: $PROJECT_ROOT"
-
-      - name: 4. gradlew'ye Calistirma Izni Ver (chmod +x)
-        # 3. adimda bulunan PROJET_ROOT degiskenini kullanir
-        run: chmod +x ${{ steps.find_root.outputs.PROJECT_ROOT }}/gradlew
-          
-      - name: 5. Java 17 Kurulumu
+      - name: 4. Java 17 Kurulumu
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
           
-      - name: 6. Gradle Onbellegini Yapilandir
+      # 5. Gradle Onbellegini Yapilandir (Cache adimini baslikta degistirdim, icerik ayni)
+      - name: 5. Gradle Onbellegini Yapilandir
         uses: actions/cache@v3
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('${{ steps.find_root.outputs.PROJECT_ROOT }}/gradle-wrapper.properties') }}
+          # 'tv_project' klasorunu dogrudan kullaniyoruz
+          key: ${{ runner.os }}-gradle-${{ hashFiles('tv_project/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
             
-      - name: 7. Debug (Hata Ayiklama) APK'sini Olustur
+      # 🚀 KRITIK GÜNCELLEME: assembleDebug komutuna --stacktrace eklendi
+      - name: 6. Debug (Hata Ayiklama) APK'sini Olustur
         run: |
-          # Tespit edilen proje kök dizinine gidilir
-          cd ${{ steps.find_root.outputs.PROJECT_ROOT }}
-          ./gradlew assembleDebug
+          echo "Proje kök dizinine gidiliyor ve Gradle çalıştırılıyor..."
+          cd tv_project
+          # --stacktrace ile hata olmasi durumunda detayli log aliyoruz.
+          ./gradlew assembleDebug --stacktrace
           
-      - name: 8. Olusan APK'yi Yukle (Artifact)
+      # 7. Olusan APK'yi Yukle (Artifact)
+      - name: 7. Olusan APK'yi Yukle (Artifact)
         uses: actions/upload-artifact@v4 
         with:
           name: android-tv-apk-debug
-          # PATH, yine tespit edilen kök dizinine gore ayarlandi
-          path: ${{ steps.find_root.outputs.PROJECT_ROOT }}/app/build/outputs/apk/debug/*.apk
+          path: tv_project/app/build/outputs/apk/debug/*.apk
