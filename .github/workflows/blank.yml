@@ -20,8 +20,42 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # 🚀 3. ADIM: app/build.gradle (Hatalı Leanback KTX Kaldırıldı)
-      - name: 3. app/build.gradle Dosyasini Yeniden Olustur
+      # 🚀 KRITIK KOD DUZELTMELERI BURADA BASLIYOR
+      
+      - name: 3. ChannelsFragment.kt Dosyasina Eksik Import Ekle
+        run: |
+          # lifecycleScope hatasini cozmek icin import eklendi
+          FILE="tv_project/app/src/main/java/com/egze/tvplus/ChannelsFragment.kt"
+          sed -i '/import androidx.leanback.widget.ListRowPresenter/a import androidx.lifecycle.lifecycleScope' $FILE
+          echo "$FILE dosyasina lifecycleScope importu eklendi."
+      
+      - name: 4. ChannelsSearchFragment.kt Dosyasindaki Hatalari Duzelt
+        run: |
+          FILE="tv_project/app/src/main/java/com/egze/tvplus/ChannelsSearchFragment.kt"
+          
+          # Leanback KTX uzanti fonksiyonlari icin importlar eklendi (Hata 3 & 4)
+          sed -i '/import androidx.leanback.widget.Presenter/a import androidx.leanback.app.searchResultProvider' $FILE
+          sed -i '/import androidx.leanback.app.searchResultProvider/a import androidx.leanback.app.setSearchAffordanceColor' $FILE
+
+          # Hata 5: 'onItemClicked' overrides nothing metodunu sil ve mantigi onCreate'e tasi
+          
+          # onItemClicked mantigini bir degiskene kaydet (Intent ve startActivity kismi)
+          CLICK_LOGIC=$(awk '/override fun onItemClicked\(item: Any\?\) \{/,/^\s*\}/' $FILE | tail -n +2 | head -n -1)
+          
+          # Hatalı override fun onItemClicked methodunu sil
+          sed -i '/override fun onItemClicked(item: Any?)/,/}/d' $FILE
+          
+          # Mantigi onCreate icine setOnItemViewClickedListener olarak ekle
+          # NOTE: ChannelsFragment'ta onResume kullanilmasina ragmen, SearchFragment icin onCreate daha uygun olabilir.
+          # Ancak, ChannelsFragment'in kod mantigina uygun olarak listener'i onResume'a tasiyoruz.
+          
+          # Yeni setOnItemViewClickedListener mantigini ChannelsSearchFragment'a ekle
+          sed -i '/override fun onCreate(savedInstanceState: Bundle?) {/a\         setOnItemViewClickedListener { itemViewHolder, item, rowViewHolder, row ->\n             if (item is Channel) {\n                 val intent = android.content.Intent(requireContext(), PlayerActivity::class.java)\n                 val index = ChannelsRepository.channels.indexOfFirst { it.id == item.id }\n                 intent.putExtra("channel_index", index)\n                 startActivity(intent)\n             }\n         }' $FILE
+
+          echo "$FILE dosyasindaki 3, 4 ve 5 numarali hatalar duzeltildi."
+
+      # 5. app/build.gradle Dosyasini Yeniden Olustur
+      - name: 5. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
           rm tv_project/app/build.gradle
@@ -72,7 +106,7 @@ jobs:
               implementation 'androidx.appcompat:appcompat:1.6.1'
               implementation 'androidx.leanback:leanback:1.2.0'
               
-              // Coroutine ve lifecycleScope uzantilari (Önceki lifecycleScope hatalarini gidermek icin)
+              // Coroutine ve lifecycleScope uzantilari
               implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
               implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
               implementation "androidx.fragment:fragment-ktx:1.6.2"    
@@ -88,8 +122,8 @@ jobs:
           }
           EOF
 
-      # 3.5 ADIM: AndroidManifest.xml Duzeltme
-      - name: 3.5 AndroidManifest.xml Duzelt
+      # 5.5 ADIM: AndroidManifest.xml Duzeltme
+      - name: 5.5 AndroidManifest.xml Duzelt
         run: |
           echo "AndroidManifest.xml dosyasi duzeltiliyor..."
           rm tv_project/app/src/main/AndroidManifest.xml
@@ -127,14 +161,14 @@ jobs:
           </manifest>
           EOF
 
-      # 3.6 ADIM: activity_player.xml Duzeltme
-      - name: 3.6 activity_player.xml Duzelt
+      # 5.6 ADIM: activity_player.xml Duzeltme
+      - name: 5.6 activity_player.xml Duzelt
         run: |
           echo "activity_player.xml dosyasindaki hatali namespace duzeltiliyor..."
           sed -i 's/android:use_controller/app:use_controller/g' tv_project/app/src/main/res/layout/activity_player.xml
           sed -i 's/xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android"/xmlns:android="http:\/\/schemas.android.com\/apk\/res\/android" xmlns:app="http:\/\/schemas.android.com\/apk\/res-auto"/g' tv_project/app/src/main/res/layout/activity_player.xml
 
-      - name: 4. Kok build.gradle Dosyasini Yeniden Olustur
+      - name: 6. Kok build.gradle Dosyasini Yeniden Olustur
         run: |
           cat <<EOF > tv_project/build.gradle
           buildscript {
@@ -156,26 +190,26 @@ jobs:
           }
           EOF
 
-      - name: 5. gradle.properties Ayarlari
+      - name: 7. gradle.properties Ayarlari
         run: |
           touch tv_project/gradle.properties
           echo "android.useAndroidX=true" >> tv_project/gradle.properties
           echo "android.enableJetifier=true" >> tv_project/gradle.properties
           echo "org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8" >> tv_project/gradle.properties
 
-      - name: 6. Java 17 Kurulumu
+      - name: 8. Java 17 Kurulumu
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 7. Gerekli Android SDK (35) Kurulumu
+      - name: 9. Gerekli Android SDK (35) Kurulumu
         uses: android-actions/setup-android@v3
         with:
           api-level: 35
           build-tools: '35.0.0'
 
-      - name: 8. Android Lisanslarini Olustur
+      - name: 10. Android Lisanslarini Olustur
         run: |
           mkdir -p $ANDROID_HOME/licenses
           echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
@@ -185,18 +219,18 @@ jobs:
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
           
-      - name: 9. Gradle Kurulumu (8.10.2)
+      - name: 11. Gradle Kurulumu (8.10.2)
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2' 
           
-      - name: 10. Debug APK'sini Olustur
+      - name: 12. Debug APK'sini Olustur
         run: |
           echo "Build baslatiliyor..."
           cd tv_project
           gradle assembleDebug --stacktrace --warning-mode all --refresh-dependencies
           
-      - name: 11. Olusan APK'yi Yukle (Artifact)
+      - name: 13. Olusan APK'yi Yukle (Artifact)
         uses: actions/upload-artifact@v4 
         with:
           name: android-tv-apk-debug
