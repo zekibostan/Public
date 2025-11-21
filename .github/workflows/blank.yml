@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
     - name: Checkout repository
       uses: actions/checkout@v4
 
@@ -19,13 +20,13 @@ jobs:
     - name: Extract tv.zip
       run: |
         unzip -o tv.zip -d project
-        echo "ZIP extracted into project/"
+        echo "ZIP extracted."
 
-    - name: Ensure root Gradle files exist
+    - name: Ensure Gradle Wrapper Exists
       run: |
         cd project
 
-        # gradlew
+        # Create gradlew
         if [ ! -f "gradlew" ]; then
           echo "Creating gradlew..."
           cat << 'EOF' > gradlew
@@ -37,52 +38,59 @@ EOF
           chmod +x gradlew
         fi
 
-        # gradle wrapper directory
+        # Create wrapper folder
         mkdir -p gradle/wrapper
 
         # gradle-wrapper.properties
         if [ ! -f "gradle/wrapper/gradle-wrapper.properties" ]; then
           echo "Creating gradle-wrapper.properties..."
-          cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
-distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
-EOF
+          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.4-bin.zip" > gradle/wrapper/gradle-wrapper.properties
         fi
 
-        # gradle-wrapper.jar (download if missing)
+        # gradle-wrapper.jar
         if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
           echo "Downloading gradle-wrapper.jar..."
           wget -q https://services.gradle.org/distributions/gradle-8.4-bin.zip -O gradlebin.zip
-          unzip -p gradlebin.zip gradle-8.4/lib/gradle-launcher-*.jar > gradle/wrapper/gradle-wrapper.jar || echo "Wrapper jar created"
-          rm gradlebin.zip || true
+          unzip -p gradlebin.zip gradle-8.4/lib/gradle-launcher-8.4.jar > gradle/wrapper/gradle-wrapper.jar
+          rm gradlebin.zip
         fi
 
-        # settings.gradle
+        # Root settings.gradle
         if [ ! -f "settings.gradle" ]; then
           echo "rootProject.name = 'EgzeTvPlus'" > settings.gradle
-          echo "Created settings.gradle"
         fi
 
-        # build.gradle (root)
+        # Root build.gradle
         if [ ! -f "build.gradle" ]; then
-          echo "Creating root build.gradle..."
           cat << 'EOF' > build.gradle
 buildscript {
-    repositories { google(); mavenCentral() }
-    dependencies { classpath 'com.android.tools.build:gradle:8.2.0' }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.2.0'
+    }
 }
-allprojects { repositories { google(); mavenCentral() } }
-task clean(type: Delete) { delete rootProject.buildDir }
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
 EOF
         fi
 
-        echo "Root Gradle structure validated."
-
-    - name: Ensure app/build.gradle exists
+    - name: Ensure app/build.gradle Exists
       run: |
         cd project
 
         if [ ! -f "app/build.gradle" ]; then
-          echo "Creating app/build.gradle..."
           mkdir -p app
           cat << 'EOF' > app/build.gradle
 plugins {
@@ -104,17 +112,13 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
 
-dependencies {
-}
+dependencies {}
 EOF
         fi
-
-        echo "App module validated."
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -128,8 +132,7 @@ EOF
         chmod +x gradlew
         ./gradlew assembleDebug --stacktrace
 
-    - name: Upload APK artifact
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: EgzeTvPlus-APK
-        path: project/app/build/outputs/apk/debug/*.apk
+        name: EgzeTvPlu
