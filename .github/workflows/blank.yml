@@ -20,7 +20,7 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
-      # 🚀 3. ADIM: build.gradle (Parcelize Eklendi & Kapt Ayarlandi)
+      # 🚀 3. ADIM: build.gradle (Lifecycle Kutuphaneleri Eklendi)
       - name: 3. app/build.gradle Dosyasini Yeniden Olustur
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
@@ -31,7 +31,7 @@ jobs:
               id 'com.android.application'
               id 'org.jetbrains.kotlin.android'
               id 'kotlin-kapt'
-              id 'kotlin-parcelize'  // HATA DUZELTME: Channel modelindeki Parcelize hatasi icin gerekli
+              id 'kotlin-parcelize'
           }
 
           android {
@@ -62,7 +62,6 @@ jobs:
               }
           }
           
-          // HATA DUZELTME: NonExistentClass hatasini onlemek icin
           kapt {
               correctErrorTypes = true
           }
@@ -72,6 +71,11 @@ jobs:
               implementation 'androidx.core:core-ktx:1.9.0'
               implementation 'androidx.appcompat:appcompat:1.6.1'
               implementation 'androidx.leanback:leanback:1.2.0'
+              
+              // 🚀 KRITIK DUZELTME: Coroutine ve lifecycleScope hatalarini cozer
+              implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
+              implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
+              
               implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
               implementation 'com.squareup.retrofit2:retrofit:2.9.0'
               implementation 'com.squareup.retrofit2:converter-moshi:2.9.0'
@@ -82,7 +86,7 @@ jobs:
           }
           EOF
 
-      # 🚀 3.5 ADIM: AndroidManifest.xml DUZELTME (Package kaldirildi, Exported eklendi)
+      # 3.5 ADIM: AndroidManifest.xml Duzeltme
       - name: 3.5 AndroidManifest.xml Duzelt
         run: |
           echo "AndroidManifest.xml dosyasi duzeltiliyor..."
@@ -121,7 +125,7 @@ jobs:
           </manifest>
           EOF
 
-      # 3.6 ADIM: activity_player.xml DUZELTME (android -> app)
+      # 3.6 ADIM: activity_player.xml Duzeltme
       - name: 3.6 activity_player.xml Duzelt
         run: |
           echo "activity_player.xml dosyasindaki hatali namespace duzeltiliyor..."
