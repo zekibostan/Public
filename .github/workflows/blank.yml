@@ -40,7 +40,7 @@ jobs:
         run: |
           echo "Eski app/build.gradle siliniyor ve yenisi yaziliyor..."
           rm -f tv_project/app/build.gradle
-          cat > tv_project/app/build.gradle <<'EOT'
+          cat > tv_project/app/build.gradle <<-'EOT'
             plugins {
                 id 'com.android.application'
                 id 'org.jetbrains.kotlin.android'
@@ -100,13 +100,13 @@ jobs:
                 kapt 'com.github.bumptech.glide:compiler:4.15.1'
                 implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
             }
-          EOT
+EOT
 
       - name: 5.5 ADIM: AndroidManifest.xml Duzeltme
         run: |
           echo "AndroidManifest.xml dosyasi duzeltiliyor..."
           rm -f tv_project/app/src/main/AndroidManifest.xml
-          cat > tv_project/app/src/main/AndroidManifest.xml <<'EOT'
+          cat > tv_project/app/src/main/AndroidManifest.xml <<-'EOT'
             <?xml version="1.0" encoding="utf-8"?>
             <manifest xmlns:android="http://schemas.android.com/apk/res/android">
                 <uses-permission android:name="android.permission.INTERNET" />
@@ -147,7 +147,7 @@ EOT
 
       - name: 6. Kok build.gradle Dosyasini Yeniden Olustur
         run: |
-          cat > tv_project/build.gradle <<'EOT'
+          cat > tv_project/build.gradle <<-'EOT'
             buildscript {
                 repositories {
                     google()
