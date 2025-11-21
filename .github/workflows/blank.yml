@@ -12,7 +12,7 @@ jobs:
     
     steps:
       - name: 1. Depoyu Cek
-        uses: actions:checkout@v4
+        uses: actions/checkout@v4
       
       - name: 2. tv.zip Dosyasini Cikar
         run: |
@@ -20,8 +20,9 @@ jobs:
           mkdir -p tv_project
           unzip tv.zip -d tv_project
           
+      # 🚀 KRITIK KOD DOSYALARINI YENIDEN YAZMA ADIMLARI
+      
       # 3. ChannelsFragment.kt Dosyasini Duzeltilmis Haliyle Yeniden Olustur
-      # KRITIK DUZELTME: Log.e icindeki ${ex.message} kaçırıldı (escaped) -> \${ex.message}
       - name: 3. ChannelsFragment.kt'yi Duzelt (lifecycleScope import eklendi)
         run: |
           echo "ChannelsFragment.kt dosyasi lifecycleScope importu ile yeniden yaziliyor..."
@@ -65,7 +66,7 @@ jobs:
 
               private fun fetchChannels() {
                   val handler = CoroutineExceptionHandler { _, ex ->
-                      Log.e("ChannelsFragment", "API error: \${ex.message}") // $ KAÇIRILDI
+                      Log.e("ChannelsFragment", "API error: \${ex.message}")
                   }
                   // lifecycleScope kullanimi ile suspend fonksiyonu cagrildi
                   lifecycleScope.launch(handler) {
@@ -96,10 +97,9 @@ jobs:
                   }
               }
           }
-EOF
+          EOF
       
       # 4. ChannelsSearchFragment.kt Dosyasini Duzeltilmis Haliyle Yeniden Olustur
-      # KRITIK DUZELTME: Log.e icindeki \${ex.message} kaçırıldı (escaped) -> \${ex.message}
       - name: 4. ChannelsSearchFragment.kt'yi Duzelt (KTX importlari ve onItemClicked kaldirildi)
         run: |
           echo "ChannelsSearchFragment.kt dosyasi KTX importlari ve onItemClicked duzeltilerek yeniden yaziliyor..."
@@ -161,7 +161,7 @@ EOF
                           rowsAdapter.add(ListRow(HeaderItem("Arama Sonuçları"), rowAdapter))
                       }
                   } catch (ex: Exception) {
-                      Log.e("ChannelsSearch", "Search error: \${ex.message}") // $ KAÇIRILDI
+                      Log.e("ChannelsSearch", "Search error: \${ex.message}")
                   }
               }
 
@@ -179,7 +179,7 @@ EOF
                   }
               }
           }
-EOF
+          EOF
 
       # 5. app/build.gradle Dosyasini Yeniden Olustur (Ayrica dogru)
       - name: 5. app/build.gradle Dosyasini Yeniden Olustur
@@ -247,7 +247,7 @@ EOF
               kapt 'com.github.bumptech.glide:compiler:4.15.1'
               implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
           }
-EOF
+          EOF
 
       # 5.5 ADIM: AndroidManifest.xml Duzeltme
       - name: 5.5 AndroidManifest.xml Duzelt
@@ -286,7 +286,7 @@ EOF
                   <activity android:name=".SearchActivity" />
               </application>
           </manifest>
-EOF
+          EOF
 
       # 5.6 ADIM: activity_player.xml Duzeltme
       - name: 5.6 activity_player.xml Duzelt
@@ -315,7 +315,7 @@ EOF
                   maven { url 'https://jitpack.io' }
               }
           }
-EOF
+          EOF
 
       - name: 7. gradle.properties Ayarlari
         run: |
