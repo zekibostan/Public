@@ -3,7 +3,7 @@ name: Full Android TV Build with Code Generation
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch: # Manuel çalıştırmaya izin verir
+  workflow_dispatch: # Bu, GitHub arayüzünden manuel tetiklemeye izin verir
 
 jobs:
   build:
@@ -20,22 +20,19 @@ jobs:
         distribution: 'temurin'
         cache: 'gradle'
         
-    - name: 📂 Proje Dizinlerini ve Yapılandırmayı Oluştur
+    - name: 📝 Kod Dosyalarını ve Proje Yapılandırmasını Oluştur
+      # Bu adım, projenin tüm gerekli dizinlerini, Gradle dosyalarını ve Kotlin/XML kodlarını yazar.
       run: |
-        # Temel Android TV dizin yapısını oluştur
-        mkdir -p app/src/main/kotlin/com/example/tvapp/model
-        mkdir -p app/src/main/kotlin/com/example/tvapp/network
-        mkdir -p app/src/main/kotlin/com/example/tvapp/ui/main
-        mkdir -p app/src/main/kotlin/com/example/tvapp/ui/playback
-        mkdir -p app/src/main/res/layout
-        mkdir -p app/src/main/AndroidManifest.xml
+        # Dizinleri oluştur
+        mkdir -p app/src/main/kotlin/com/example/tvapp/{model,network,ui/{main,playback}}
+        mkdir -p app/src/main/res/{layout,values}
         
-        # Build.gradle (Module) dosyasını oluştur
+        # Temel Gradle dosyalarını oluştur (app/build.gradle ve settings.gradle.kts)
         cat > app/build.gradle << EOF
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'kotlin-parcelize' // Parcelable desteği için
+    id 'kotlin-parcelize' 
 }
 
 android {
@@ -68,23 +65,17 @@ android {
 dependencies {
     implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.leanback:leanback:1.2.0'
-    // ExoPlayer
     implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
     implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1' 
-    // Retrofit
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
-    // Glide
     implementation 'com.github.bumptech.glide:glide:4.16.0'
-    // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
-    // Diğer temel kütüphaneler
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 }
 EOF
 
-        # settings.gradle.kts dosyasını oluştur (Gradle yapılandırması)
         cat > settings.gradle.kts << EOF
 rootProject.name = "TVApp"
 include(":app")
@@ -97,12 +88,8 @@ EOF
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <uses-feature
-        android:name="android.software.leanback"
-        android:required="true" />
-    <uses-feature
-        android:name="android.hardware.touchscreen"
-        android:required="false" />
+    <uses-feature android:name="android.software.leanback" android:required="true" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -111,15 +98,12 @@ EOF
         android:supportsRtl="true"
         android:theme="@style/Theme.Tvapp">
         
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+        <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity android:name=".ui.playback.PlaybackActivity" />
 
     </application>
@@ -137,7 +121,6 @@ import com.example.tvapp.ui.main.MainFragment
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // MainFragment'ı konteynerin içine yerleştir
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
                 .replace(android.R.id.content, MainFragment())
@@ -146,11 +129,8 @@ class MainActivity : FragmentActivity() {
     }
 }
 // EOF
-EOF
 
-    - name: 📝 Kaynak Kod Dosyalarını Oluştur
-      # Kaynak kod dosyalarını (Kotlin ve XML) oluştur
-      run: |
+        # ChannelModel.kt ve ApiResponse.kt
         cat > app/src/main/kotlin/com/example/tvapp/model/ChannelModel.kt << 'EOF_MODEL'
 package com.example.tvapp.model
 
@@ -176,6 +156,7 @@ data class ApiResponse(
 // EOF_MODEL
 EOF_MODEL
         
+        # ApiService.kt
         cat > app/src/main/kotlin/com/example/tvapp/network/ApiService.kt << 'EOF_API'
 package com.example.tvapp.network
 
@@ -190,7 +171,7 @@ interface ApiService {
 // EOF_API
 EOF_API
 
-        # MainFragment.kt ve CardPresenter.kt (MainFragment içinde) 
+        # MainFragment.kt ve CardPresenter.kt
         cat > app/src/main/kotlin/com/example/tvapp/ui/main/MainFragment.kt << 'EOF_MAIN'
 package com.example.tvapp.ui.main
 
@@ -201,14 +182,13 @@ import androidx.leanback.app.BrowseSupportFragment
 import androidx.leanback.widget.*
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
-import com.example.tvapp.R
 import com.example.tvapp.model.ChannelModel
 import com.example.tvapp.network.ApiService
 import com.example.tvapp.ui.playback.PlaybackActivity
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import kotlinx.coroutines.launch
-import androidx.leanback.widget.ImageCardView // ImageCardView kullanımı için eklendi
+import androidx.leanback.widget.ImageCardView
 
 class MainFragment : BrowseSupportFragment() {
 
@@ -237,7 +217,6 @@ class MainFragment : BrowseSupportFragment() {
                 val response = apiService.getChannels()
                 
                 if (response.isSuccessful && response.body() != null) {
-                    // Kategoriye göre gruplama
                     val groupedChannels = response.body()!!.channels.groupBy { it.description }
 
                     groupedChannels.forEach { (categoryTitle, channelList) ->
@@ -250,7 +229,6 @@ class MainFragment : BrowseSupportFragment() {
                     adapter = rowsAdapter
                 }
             } catch (e: Exception) {
-                // Hata yönetimi
                 println("API hatası: ${e.message}")
             }
         }
@@ -276,7 +254,6 @@ class CardPresenter(private val logoBaseUrl: String) : Presenter() {
         val cardView = ImageCardView(parent.context).apply {
             isFocusable = true
             isFocusableInTouchMode = true
-            // Kanal kart boyutlarını ayarla
             setMainImageDimensions(300, 200) 
         }
         return ViewHolder(cardView)
@@ -292,13 +269,12 @@ class CardPresenter(private val logoBaseUrl: String) : Presenter() {
         val fullLogoUrl = logoBaseUrl + channel.thumbImg
         Glide.with(cardView.context)
             .load(fullLogoUrl)
-            .centerInside() // Resmi kart boyutlarına sığdır
+            .centerInside() 
             .into(cardView.mainImageView)
     }
 
     override fun onUnbindViewHolder(viewHolder: ViewHolder) { 
-        val cardView = viewHolder.view as ImageCardView
-        cardView.mainImage = null // Hafıza temizliği
+        (viewHolder.view as ImageCardView).mainImage = null
     }
 }
 // EOF_MAIN
@@ -346,14 +322,12 @@ class PlaybackActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_playback)
         
-        // View Tanımlamaları
         playerView = findViewById(R.id.player_view)
         infoOverlay = findViewById(R.id.info_overlay)
         overlayTitle = findViewById(R.id.overlay_title)
         overlayCategory = findViewById(R.id.overlay_category)
         overlayLogo = findViewById(R.id.overlay_logo)
         
-        // Veriyi al
         channelData = intent.getParcelableExtra("CHANNEL_DATA") ?: run { finish(); return }
         
         initializePlayer(channelData.url)
@@ -408,7 +382,6 @@ class PlaybackActivity : Activity() {
                 }
                 true
             }
-            // Kanal değiştirme tuşları (sol/sağ) burada işlenmelidir
             else -> super.onKeyDown(keyCode, event)
         }
     }
@@ -458,7 +431,6 @@ EOF_PLAYBACK
             android:id="@+id/overlay_logo"
             android:layout_width="100dp"
             android:layout_height="60dp"
-            android:src="@drawable/ic_launcher_background"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -471,7 +443,7 @@ EOF_PLAYBACK
             android:textSize="18sp"
             android:layout_marginStart="24dp"
             app:layout_constraintStart_toEndOf="@id/overlay_logo"
-            app:layout_constraintTop_toTopOf="@id:overlay_logo" />
+            app:layout_constraintTop_toTopOf="@id/overlay_logo" />
             
         <TextView
             android:id="@+id/overlay_title"
@@ -498,7 +470,7 @@ EOF_PLAYBACK
 </androidx.constraintlayout.widget.ConstraintLayout>
 EOF_XML
 
-        # Basit bir strings.xml dosyası ekle
+        # strings.xml
         cat > app/src/main/res/values/strings.xml << 'EOF_STRINGS'
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
@@ -511,7 +483,7 @@ EOF_STRINGS
         chmod +x gradlew
         
     - name: 🏗️ Hata Ayıklama (Debug) APK'sını Oluştur
-      # Tüm kod dosyaları oluşturulduktan sonra derleme işlemini başlatır
+      # Derleme ve paketleme işlemini başlatır.
       run: ./gradlew assembleDebug
 
     - name: 📤 APK Dosyasını Yükle (Artifact)
