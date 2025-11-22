@@ -1,9 +1,9 @@
-name: Full Android TV Build with Code Generation
+name: Full Android TV Build - Fixed Syntax
 
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch: # Bu, GitHub arayüzünden manuel tetiklemeye izin verir
+  workflow_dispatch:
 
 jobs:
   build:
@@ -21,14 +21,14 @@ jobs:
         cache: 'gradle'
         
     - name: 📝 Kod Dosyalarını ve Proje Yapılandırmasını Oluştur
-      # Bu adım, projenin tüm gerekli dizinlerini, Gradle dosyalarını ve Kotlin/XML kodlarını yazar.
+      # Tüm gerekli dizinleri, Gradle ve Kotlin/XML dosyalarını yazar.
       run: |
         # Dizinleri oluştur
         mkdir -p app/src/main/kotlin/com/example/tvapp/{model,network,ui/{main,playback}}
         mkdir -p app/src/main/res/{layout,values}
         
-        # Temel Gradle dosyalarını oluştur (app/build.gradle ve settings.gradle.kts)
-        cat > app/build.gradle << EOF
+        # app/build.gradle
+        cat > app/build.gradle << 'EOF'
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -75,14 +75,15 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 }
 EOF
-
-        cat > settings.gradle.kts << EOF
+        
+        # settings.gradle.kts
+        cat > settings.gradle.kts << 'EOF'
 rootProject.name = "TVApp"
 include(":app")
 EOF
-
-        # AndroidManifest.xml'i oluştur
-        cat > app/src/main/AndroidManifest.xml << EOF
+        
+        # AndroidManifest.xml
+        cat > app/src/main/AndroidManifest.xml << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -110,8 +111,8 @@ EOF
 </manifest>
 EOF
 
-        # MainActivity.kt'yi oluştur
-        cat > app/src/main/kotlin/com/example/tvapp/MainActivity.kt << EOF
+        # MainActivity.kt
+        cat > app/src/main/kotlin/com/example/tvapp/MainActivity.kt << 'EOF'
 package com.example.tvapp
 
 import androidx.fragment.app.FragmentActivity
@@ -128,10 +129,10 @@ class MainActivity : FragmentActivity() {
         }
     }
 }
-// EOF
+EOF
 
-        # ChannelModel.kt ve ApiResponse.kt
-        cat > app/src/main/kotlin/com/example/tvapp/model/ChannelModel.kt << 'EOF_MODEL'
+        # ChannelModel.kt
+        cat > app/src/main/kotlin/com/example/tvapp/model/ChannelModel.kt << 'EOF'
 package com.example.tvapp.model
 
 import android.os.Parcelable
@@ -153,11 +154,10 @@ data class ApiResponse(
     @SerializedName("updated_at") val updatedAt: String,
     val channels: List<ChannelModel>
 )
-// EOF_MODEL
-EOF_MODEL
-        
+EOF
+
         # ApiService.kt
-        cat > app/src/main/kotlin/com/example/tvapp/network/ApiService.kt << 'EOF_API'
+        cat > app/src/main/kotlin/com/example/tvapp/network/ApiService.kt << 'EOF'
 package com.example.tvapp.network
 
 import com.example.tvapp.model.ApiResponse
@@ -168,11 +168,10 @@ interface ApiService {
     @GET("app-api/channels.php") 
     suspend fun getChannels(): Response<ApiResponse>
 }
-// EOF_API
-EOF_API
+EOF
 
-        # MainFragment.kt ve CardPresenter.kt
-        cat > app/src/main/kotlin/com/example/tvapp/ui/main/MainFragment.kt << 'EOF_MAIN'
+        # MainFragment.kt
+        cat > app/src/main/kotlin/com/example/tvapp/ui/main/MainFragment.kt << 'EOF'
 package com.example.tvapp.ui.main
 
 import android.content.Intent
@@ -277,11 +276,10 @@ class CardPresenter(private val logoBaseUrl: String) : Presenter() {
         (viewHolder.view as ImageCardView).mainImage = null
     }
 }
-// EOF_MAIN
-EOF_MAIN
+EOF
 
         # PlaybackActivity.kt
-        cat > app/src/main/kotlin/com/example/tvapp/ui/playback/PlaybackActivity.kt << 'EOF_PLAYBACK'
+        cat > app/src/main/kotlin/com/example/tvapp/ui/playback/PlaybackActivity.kt << 'EOF'
 package com.example.tvapp.ui.playback
 
 import android.app.Activity
@@ -397,11 +395,10 @@ class PlaybackActivity : Activity() {
         hideHandler.removeCallbacks(hideRunnable)
     }
 }
-// EOF_PLAYBACK
-EOF_PLAYBACK
+EOF
 
         # activity_playback.xml
-        cat > app/src/main/res/layout/activity_playback.xml << 'EOF_XML'
+        cat > app/src/main/res/layout/activity_playback.xml << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout 
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -443,7 +440,7 @@ EOF_PLAYBACK
             android:textSize="18sp"
             android:layout_marginStart="24dp"
             app:layout_constraintStart_toEndOf="@id/overlay_logo"
-            app:layout_constraintTop_toTopOf="@id/overlay_logo" />
+            app:layout_constraintTop_toTopOf="@id:overlay_logo" />
             
         <TextView
             android:id="@+id/overlay_title"
@@ -468,26 +465,24 @@ EOF_PLAYBACK
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
-EOF_XML
+EOF
 
         # strings.xml
-        cat > app/src/main/res/values/strings.xml << 'EOF_STRINGS'
+        cat > app/src/main/res/values/strings.xml << 'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Android TV IPTV</string>
     <string name="browse_title">Kanallar</string>
 </resources>
-EOF_STRINGS
+EOF
         
         # Gradle Wrapper'a çalıştırma izni ver
         chmod +x gradlew
         
     - name: 🏗️ Hata Ayıklama (Debug) APK'sını Oluştur
-      # Derleme ve paketleme işlemini başlatır.
       run: ./gradlew assembleDebug
 
     - name: 📤 APK Dosyasını Yükle (Artifact)
-      # Oluşturulan APK dosyasını GitHub Actions'ın sonuç sayfasına yükler
       uses: actions/upload-artifact@v4
       with:
         name: android-tv-apk
